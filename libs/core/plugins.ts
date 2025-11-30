@@ -1,30 +1,19 @@
-// =====================================
-//       Plugin Engine - plugins.ts
-//       插件注册中心（系统大脑）
-// =====================================
+// ==================================================
+//                插件管理中心
+//      所有插件都通过此文件注册到系统
+// ==================================================
 
-export interface BotPlugin {
-  name: string;                     // 插件名称
-  onMessage?: Function;             // 处理普通消息
-  onCallback?: Function;            // 处理按钮回调
-  onMenu?: Function;                // 注册菜单
+export const Plugins: any[] = [];
+
+export function registerPlugin(plugin: any) {
+  Plugins.push(plugin);
+  console.log(`🔌 Plugin loaded: ${plugin.name}`);
 }
 
-const plugins: BotPlugin[] = [];
-
-// 注册插件（插件模块调用）
-export function registerPlugin(plugin: BotPlugin) {
-  plugins.push(plugin);
-  console.log(`[PLUGIN] Loaded: ${plugin.name}`);
+export function registerMenu(name: string, handler: any) {
+  Plugins.push({
+    name,
+    menuName: name,
+    onMenu: handler
+  });
 }
-
-// 获取全部插件
-export function getPlugins() {
-  return plugins;
-}
-
-// 按名称查找插件
-export function getPluginByName(name: string) {
-  return plugins.find(p => p.name === name);
-}
-
