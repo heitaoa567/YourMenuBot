@@ -1,78 +1,104 @@
-// =============================================
-// 主菜单键盘按钮（多语言 + VIP 自适应）
-// =============================================
+// keyboards.ts
+// ======================================================
+// YourMenuBot 统一键盘按钮系统（主菜单 + 交互按钮）
+// 支持 6 国多语言 + 返回按钮 + 子机器人 + VIP + 推广
+// ======================================================
 
-import { isVIP } from "../libs/utils.ts";
+import { LANG } from "../languages.ts";
 
-export function mainMenu(user: any) {
-  const vip = isVIP(user.vipUntil);
-
-  // ================
-  // 多语言按钮文本
-  // ================
-  const txt = {
-    zh: {
-      chat: "🤖 ChatGPT智能助理",
-      bind: "🤖 绑定子机器人",
-      mybots: "🎛 我的子机器人",
-      vip: vip ? "💎 VIP 面板（已开通）" : "💎 开通 VIP",
-      referral: "📣 推广中心",
-      lang: "🌐 切换语言",
-      recharge: "💰 充值 USDT 开通 VIP",
-    },
-    en: {
-      chat: "🤖 ChatGPT Assistant",
-      bind: "🤖 Bind Sub Bot",
-      mybots: "🎛 My Bots",
-      vip: vip ? "💎 VIP Panel (Active)" : "💎 Get VIP",
-      referral: "📣 Referral Center",
-      lang: "🌐 Language",
-      recharge: "💰 Recharge USDT for VIP",
-    }
-  };
-
-  const t = txt[user.lang || "zh"];
-
-  // ================
-  // 动态按钮布局
-  // ================
-  const keyboard = {
+// 🔙 返回按钮
+export function backButton(lang: string) {
+  const L = LANG[lang];
+  return {
     inline_keyboard: [
-      [{ text: t.chat, callback_data: "chat" }],
-      [{ text: t.bind, callback_data: "bind_bot" }],
-      [{ text: t.mybots, callback_data: "my_bots" }],
-      [{ text: t.vip, callback_data: "vip_panel" }],
-      [{ text: t.referral, callback_data: "referral" }],
-      [{ text: t.recharge, callback_data: "recharge" }],
-      [{ text: t.lang, callback_data: "lang_menu" }],
+      [{ text: L.btn_back, callback_data: "back" }],
+      [{ text: L.btn_menu, callback_data: "menu" }],
     ],
   };
-
-  return keyboard;
 }
 
-// =============
-// 语言选择按钮
-// =============
+// 🏠 主菜单按钮
+export function mainMenu(user: any) {
+  const L = LANG[user.lang || "en"];
+
+  return {
+    inline_keyboard: [
+      [
+        { text: L.btn_ai, callback_data: "ai" },
+        { text: L.btn_vip, callback_data: "vip" },
+      ],
+      [
+        { text: L.btn_ref, callback_data: "ref" },
+        { text: L.btn_subbot, callback_data: "subbot" },
+      ],
+      [
+        { text: L.btn_lang + " ▾", callback_data: "lang_menu" }
+      ]
+    ],
+  };
+}
+
+// 🌐 多语言选择菜单
 export function languageMenu() {
   return {
     inline_keyboard: [
-      [{ text: "中文", callback_data: "lang_zh" }],
-      [{ text: "English", callback_data: "lang_en" }]
+      [
+        { text: "🇨🇳 中文", callback_data: "lang_zh" },
+        { text: "🇺🇸 English", callback_data: "lang_en" }
+      ],
+      [
+        { text: "🇹🇭 ไทย", callback_data: "lang_th" },
+        { text: "🇻🇳 Tiếng Việt", callback_data: "lang_vi" }
+      ],
+      [
+        { text: "🇮🇩 Bahasa Indonesia", callback_data: "lang_id" },
+        { text: "🇲🇲 မြန်မာစာ", callback_data: "lang_mm" }
+      ],
+      [
+        { text: "⬅️ 返回", callback_data: "menu" }
+      ]
     ],
   };
 }
 
-// =============
-// VIP 套餐选择按钮
-// =============
-export function vipMenu() {
+// 👑 VIP 购买菜单（选择时长）
+export function vipBuyMenu(user: any) {
+  const L = LANG[user.lang];
+
   return {
     inline_keyboard: [
-      [{ text: "周卡（5U）", callback_data: "vip_week" }],
-      [{ text: "月卡（10U）", callback_data: "vip_month" }],
-      [{ text: "季卡（25U）", callback_data: "vip_quarter" }],
-      [{ text: "年卡（80U）", callback_data: "vip_year" }],
+      [{ text: L.vip_week, callback_data: "vip_week" }],
+      [{ text: L.vip_month, callback_data: "vip_month" }],
+      [{ text: L.vip_quarter, callback_data: "vip_quarter" }],
+      [{ text: L.vip_year, callback_data: "vip_year" }],
+      [{ text: L.btn_back, callback_data: "menu" }],
+    ],
+  };
+}
+
+// 📢 推广中心返回按钮
+export function referralMenu(user: any) {
+  const L = LANG[user.lang];
+
+  return {
+    inline_keyboard: [
+      [{ text: L.btn_back, callback_data: "menu" }],
+    ],
+  };
+}
+
+// 🤖 绑定子机器人菜单
+export function subBotMenu(user: any) {
+  const L = LANG[user.lang];
+
+  return {
+    inline_keyboard: [
+      [
+        { text: "➕ 绑定新机器人", callback_data: "bind_subbot" }
+      ],
+      [
+        { text: L.btn_back, callback_data: "menu" }
+      ]
     ],
   };
 }
