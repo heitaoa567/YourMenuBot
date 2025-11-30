@@ -1,75 +1,113 @@
-// ===============================================
-// ChatGPT 聊天模块（OpenAI 官方 API）
-// - 普通用户每天限时 30 分钟
-// - VIP 用户无限时
-// ===============================================
+// libs/chatgpt.ts
+// ========================================================
+// AI Assistant 模块（OpenAI 官方 API）
+// 支持：每日使用时长限制、VIP无限制、多语言
+// ========================================================
 
-import { OPENAI_API_KEY, AI_CONFIG } from "../config/config.ts";
-import { getUser, saveUser } from "../db/kv.ts";
-import { isVIP } from "./utils.ts";
+import { LANG } from "../languages.ts";
+import { getUser, saveUser } from "../db/userdb.ts";
 
-// ------------------------------
-// OpenAI 请求函数
-// ------------------------------
-async function askChatGPT(messages: any[]) {
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+// 从环境变量读取 OpenAI Key
+const OPENAI_KEY = Deno.env.get("OPENAI_API_KEY") || "";
+
+// 普通用户每日可使用 AI 的最大秒数（30分钟）
+const FREE_AI_LIMIT = 30 * 60;
+
+// OpenAI Chat API URL
+const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
+
+/**
+ * 检查用户是否可以继续使用 AI
+ */
+export async function checkAIAllow(chatId: number): Promise<string | null> {
+  const user = await getUser(chatId);
+  const L = LANG[user.lang || "en"];
+
+  const now = new Date();
+  const today = now.toISOString().split("T")[0];
+
+  // 第一次使用，初始化
+  if (!user.ai_last_date) user.ai_last_date = today;
+  if (!user.ai_usage_today) user.ai_usage_today = 0;
+
+  // 日期变更 = 自动重置（cron.ts 里也会重置）
+  if (user.ai_last_date !== today) {
+    user.ai_usage_today = 0;
+    user.ai_last_date = today;
+    await saveUser(chatId, user);
+  }
+
+  // VIP 不限制
+  const ts = Math.floor(Date.now() / 1000);
+  if (user.vip_until && user.vip_until > ts) {
+    return null; // VIP 可以无限使用
+  }
+
+  // 免费用户限制
+  if (user.ai_usage_today >= FREE_AI_LIMIT) {
+    return L.ai_limit;
+  }
+
+  return null; // 可以使用
+}
+
+/**
+ * 调用 OpenAI 进行 AI 对话
+ */
+export async function askAI(chatId: number, prompt: string): Promise<string> {
+  const user = await getUser(chatId);
+  const L = LANG[user.lang || "en"];
+
+  if (!OPENAI_KEY) {
+    return "❌ OpenAI API Key 未配置（请在环境变量设置 OPENAI_API_KEY）";
+  }
+
+  // 检查使用限制
+  const limitMsg = await checkAIAllow(chatId);
+  if (limitMsg) return limitMsg;
+
+  // 调用 OpenAI
+  const res = await fetch(OPENAI_URL, {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${OPENAI_API_KEY}`,
+      "Authorization": `Bearer ${OPENAI_KEY}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: AI_CONFIG.model,
-      messages,
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: L.ai_system_prompt },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.7,
     }),
   });
 
-  const json = await res.json();
-  return json.choices?.[0]?.message?.content ?? "AI 无法回复，请稍后再试。";
-}
-
-// ------------------------------
-// ChatGPT 聊天入口
-// ------------------------------
-export async function chatWithAI(userId: number, message: string): Promise<string> {
-  const user = await getUser(userId);
-
-  // VIP 用户无限制
-  if (!isVIP(user.vipUntil)) {
-    // 普通用户限时
-    const now = Date.now();
-    const today = new Date().toDateString();
-
-    if (user.lastChatReset !== today) {
-      // 新的一天 → 重置时间
-      user.chatUsedToday = 0;
-      user.lastChatReset = today;
-    }
-
-    if (user.chatUsedToday >= AI_CONFIG.timeoutFreeUser) {
-      await saveUser(user);
-      return "⏳ 今日 ChatGPT 免费额度（30 分钟）已用完，请明天再试或开通 VIP 获取无限使用！";
-    }
+  if (!res.ok) {
+    return "❌ AI 服务请求失败，请稍后再试。";
   }
 
-  // 保存开始时间
-  const start = Date.now();
+  const data = await res.json();
+  const reply = data.choices?.[0]?.message?.content || "（AI 未返回内容）";
 
-  // 调用 OpenAI
-  const reply = await askChatGPT([
-    { role: "user", content: message }
-  ]);
-
-  // 计算本次使用时长
-  const used = Math.floor((Date.now() - start) / 1000);
-
-  // 更新用户使用时间
-  if (!isVIP(user.vipUntil)) {
-    user.chatUsedToday += used;
-  }
-
-  await saveUser(user);
+  // 记录使用时长（估算 10 秒使用）
+  user.ai_usage_today += 10;
+  await saveUser(chatId, user);
 
   return reply;
 }
 
+/**
+ * 分段发送长消息（避免 Telegram 限制）
+ */
+export function splitMessage(text: string, maxLength = 3900): string[] {
+  const parts: string[] = [];
+
+  while (text.length > maxLength) {
+    parts.push(text.slice(0, maxLength));
+    text = text.slice(maxLength);
+  }
+  parts.push(text);
+
+  return parts;
+}
