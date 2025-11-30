@@ -1,59 +1,53 @@
+// ==========================================
+//               payment.ts
+//       YourMenuBot — USDT 充值系统
+// ==========================================
+
 import { getUser, saveUser } from "../db/userdb.ts";
-import { LANG } from "./languages.ts";
+import { extendVIP, getVipDays } from "./vip.ts";
 
-// 你的 TRC20 地址
-const USDT_ADDRESS = Deno.env.get("USDT_ADDRESS") || "TEJTdBXKK49CuSnoh2GnCgmXr6sbCDXJHh";
+// 使用的充值地址，从环境变量读取
+const USDT_ADDRESS = Deno.env.get("USDT_ADDRESS") ||
+  "TEJTdBXKK49CuSnoh2GnCgmXr6sbCDXJHh"; // 默认地址
 
-const plans = {
-  week: 5,
-  month: 10,
-  season: 25,
-  year: 80,
-};
-
-export function getPaymentInfo(userLang = "en") {
-  const L = LANG[userLang];
-
-  return `
-💎 *VIP 充值方式（USDT-TRC20）*
-
-请向以下地址转账：
-
-📥 *充值地址：*
-\`${USDT_ADDRESS}\`
-
-📦 *套餐价格：*
-• 周卡：5U
-• 月卡：10U
-• 季卡：25U
-• 年卡：80U
-
-支付完成后发送：
-
-👉  \`pay TXID 套餐名\`
-
-示例：
-\`pay 83js8d9d9sjsd week\`
-  `;
+/**
+ * 验证 txid 格式是否正确
+ * （这里只做基本验证，未来可以扩展链上校验）
+ */
+export function validateTxid(txid: string): boolean {
+  // TRON 链 txid 长度 64 字符（Hex）
+  return /^[A-Fa-f0-9]{64}$/.test(txid);
 }
 
-export async function handlePayment(id: number, txid: string) {
-  const user = await getUser(id);
-  const now = Math.floor(Date.now() / 1000);
+/**
+ * 处理用户的 USDT 支付
+ * 自动开通对应 VIP 套餐
+ */
+export async function handleUSDT(userId: number): Promise<string> {
+  const user = await getUser(userId);
 
-  // 默认给 7 天（可改）
-  const addDays = 7;
-  const seconds = addDays * 86400;
+  if (!user.buy_plan) {
+    return "⚠️ 你还没有选择 VIP 套餐，请先点击菜单选择。";
+  }
 
-  user.vip_until = (user.vip_until > now ? user.vip_until : now) + seconds;
+  const days = getVipDays(user.buy_plan);
+  if (days === 0) {
+    return "⚠️ 套餐选择无效，请重新选择。";
+  }
 
-  await saveUser(id, user);
+  // 自动延期 VIP
+  const msg = await extendVIP(userId, days);
 
-  return `
-🎉 *充值成功！*
-TXID：${txid}
+  // 清除已购买套餐记录
+  user.buy_plan = null;
+  await saveUser(userId, user);
 
-你的 VIP 已延长 *${addDays} 天*
-到期时间：*${new Date(user.vip_until * 1000).toLocaleString()}*
-  `;
+  return msg;
+}
+
+/**
+ * 返回付款地址（供菜单调用）
+ */
+export function getPayAddress(): string {
+  return USDT_ADDRESS;
 }
