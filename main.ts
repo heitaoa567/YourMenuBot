@@ -4,11 +4,12 @@
 // AI 助手 / VIP / 推广 / 多语言 / 子机器人
 // =============================================
 
-import { LANG } from "./languages.ts";
+import { LANG } from "./libs/languages.ts";
 import { mainMenu, languageMenu, vipBuyMenu, referralMenu, subBotMenu } from "./keyboards/keyboards.ts";
 import { handleReferral, recordReferral, recordReferralClick } from "./libs/referral.ts";
 import { getPaymentInfo, handlePayment, buyVIP } from "./libs/payment.ts";
 import { getUser, saveUser } from "./db/userdb.ts";
+import { runDailyTasks } from "./cron/cron.ts";
 
 const BOT_TOKEN = Deno.env.get("BOT_TOKEN");
 const TG = `https://api.telegram.org/bot${BOT_TOKEN}`;
