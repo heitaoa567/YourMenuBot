@@ -1,32 +1,45 @@
+// ===============================
+//       referral.ts — 推广中心
+// ===============================
+
+// 用户数据库（使用 KV 封装）
 import { getUser, saveUser } from "../db/userdb.ts";
 
-export async function recordReferralClick(ownerId: number) {
-  const user = await getUser(ownerId);
+// 生成推广链接（适配 Deno Deploy）
+export function generateReferralLink(userId: number): string {
+  const base = Deno.env.get("PUBLIC_URL") || "https://example.com"; 
+  return `${base}/start=${userId}`;
+}
+
+// 记录推广点击
+export function recordReferralClick(referrerId: number) {
+  const user = getUser(referrerId);
   user.referral_clicks = (user.referral_clicks || 0) + 1;
-  await saveUser(ownerId, user);
+  saveUser(user);
 }
 
-export async function recordReferral(ownerId: number) {
-  const user = await getUser(ownerId);
+// 用户成功注册（你要绑定子机器人时用）
+export function recordReferralSuccess(referrerId: number) {
+  const user = getUser(referrerId);
   user.referrals = (user.referrals || 0) + 1;
-  await saveUser(ownerId, user);
+  saveUser(user);
 }
 
-export function handleReferral(id: number) {
-  const link = `https://t.me/${Deno.env.get("BOT_USERNAME")}?start=${id}`;
+// 获取推广信息
+export function getReferralInfo(userId: number) {
+  const user = getUser(userId);
 
-  return `
-📣 *推广中心*
+  return {
+    link: generateReferralLink(userId),
+    clicks: user.referral_clicks || 0,
+    successes: user.referrals || 0,
+    income: user.referral_income || 0,
+  };
+}
 
-你的专属邀请链接：
-👉 ${link}
-
-每邀请 1 位新用户，可以获得返利收益。
-
-📊 *你的数据：*
-• 邀请访问：${0}
-• 注册人数：${0}
-
-快去分享你的链接，赚取奖励！
-  `;
+// 增加推广返利
+export function addReferralIncome(userId: number, amount: number) {
+  const user = getUser(userId);
+  user.referral_income = (user.referral_income || 0) + amount;
+  saveUser(user);
 }
