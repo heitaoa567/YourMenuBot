@@ -1,80 +1,109 @@
-// ==============================================
-// 支付模块：USDT-TRC20 充值检测（单地址版本）
-// 自动识别充值金额，开通对应 VIP 套餐
-// ==============================================
+// payment.ts
+// ======================================================
+// YourMenuBot VIP 支付系统（USDT-TRC20）
+// ======================================================
 
-import { USDT_TRC20_ADDRESS, VIP_PLANS } from "../config/config.ts";
-import { getPayment, savePayment, getUser, saveUser } from "../db/kv.ts";
-import { activateVIP } from "./vip.ts";
+import { LANG } from "../languages.ts";
+import { getUser, saveUser } from "../db/userdb.ts";
 
-// 默认使用 TronGrid API（免费）
-const TRON_API = "https://api.trongrid.io";
+// USDT 地址从环境变量读取
+const USDT_ADDRESS = Deno.env.get("USDT_TRC20_ADDRESS") || "TEJTdBXKK49CuSnoh2GnCgmXr6sbCDXJHh";
 
-// ----------------------------------------------
-// 查询该地址最近的 TRC20 交易
-// ----------------------------------------------
-async function fetchUSDTTransactions(address: string) {
-  const url = `${TRON_API}/v1/accounts/${address}/transactions/trc20?limit=20`;
+// VIP 时长（秒）
+const WEEK = 7 * 24 * 60 * 60;
+const MONTH = 30 * 24 * 60 * 60;
+const QUARTER = 90 * 24 * 60 * 60;
+const YEAR = 365 * 24 * 60 * 60;
 
-  const res = await fetch(url);
-  const json = await res.json();
+// ======================================================
+// 显示充值方式（用户点击 VIP → Buy）
+// ======================================================
+export function getPaymentInfo(chatId: number) {
+  const user = getUser(chatId);
+  const L = LANG[user.lang || "en"];
 
-  return json.data || [];
+  return `
+${L.pay_title}
+
+${L.pay_send}
+
+\`${USDT_ADDRESS}\`
+
+${L.pay_wait}
+  `;
 }
 
-// ----------------------------------------------
-// 自动判断用户是否充值成功
-// ----------------------------------------------
-export async function checkPayment(userId: number): Promise<string> {
-  const user = await getUser(userId);
+// ======================================================
+// 执行充值（用户发送 pay TXID 后）
+// ======================================================
+export async function handlePayment(chatId: number, txid: string) {
+  const user = getUser(chatId);
+  const L = LANG[user.lang || "en"];
 
-  const txList = await fetchUSDTTransactions(USDT_TRC20_ADDRESS);
-
-  // 遍历最近交易
-  for (const tx of txList) {
-    // 只处理 USDT 交易（TRC20）
-    if (!tx.token_info || tx.token_info.symbol !== "USDT") continue;
-
-    const amount = Number(tx.value) / Math.pow(10, 6); // USDT 精度
-    const txid = tx.transaction_id;
-
-    // 是否重复处理
-    const old = await getPayment(txid);
-    if (old) continue;
-
-    // 判断充值是否来自当前用户
-    if (tx.from !== userId.toString()) {
-      // 你未来可扩展成每用户独立充值地址
-      // 现在是单地址版，所以默认认领
-    }
-
-    // 匹配套餐
-    let matchedPlan: any = null;
-    for (const key in VIP_PLANS) {
-      if (VIP_PLANS[key as keyof typeof VIP_PLANS].price <= amount) {
-        matchedPlan = { key, ...VIP_PLANS[key as keyof typeof VIP_PLANS] };
-      }
-    }
-
-    if (!matchedPlan) continue;
-
-    // 保存交易记录
-    await savePayment(txid, {
-      userId,
-      amount,
-      plan: matchedPlan.key,
-      ts: Date.now()
-    });
-
-    // 开通 VIP
-    await activateVIP(userId, matchedPlan.days);
-
-    // 保存用户数据（触发 KV 持久化）
-    await saveUser(user);
-
-    return `🎉 VIP 套餐已开通：${matchedPlan.key}\n金额：${amount} USDT\n有效期：${matchedPlan.days}天\n可绑定机器人：${matchedPlan.maxBots} 个`;
+  // 模拟验证（未来可接入 API）
+  if (!txid || txid.length < 10) {
+    return "❌ TXID 不正确，请重新发送。格式示例：\n\npay TXIDxxxx12345";
   }
 
-  return "⚠️ 暂无检测到你的充值，请稍后再试。";
+  // 测试阶段：所有 TXID 默认成功 + 赠送 1 个月 VIP
+  const now = Math.floor(Date.now() / 1000);
+
+  // VIP 已过期 → 从现在开始
+  if (!user.vip_until || user.vip_until < now) {
+    user.vip_until = now + MONTH;
+  } else {
+    // VIP 续费叠加
+    user.vip_until += MONTH;
+  }
+
+  saveUser(chatId, user);
+
+  return `
+🎉 *充值成功*
+
+您的 TXID：
+\`${txid}\`
+
+👑 VIP 已成功延长 1 个月！
+
+到期时间：
+*${new Date(user.vip_until * 1000).toLocaleString()}*
+
+感谢您的支持 ❤️
+  `;
 }
 
+// ======================================================
+// 处理 VIP 时长选择
+// ======================================================
+export function buyVIP(chatId: number, type: string) {
+  const user = getUser(chatId);
+  const L = LANG[user.lang || "en"];
+
+  let seconds = 0;
+  let name = "";
+
+  if (type === "week") { seconds = WEEK; name = L.vip_week; }
+  if (type === "month") { seconds = MONTH; name = L.vip_month; }
+  if (type === "quarter") { seconds = QUARTER; name = L.vip_quarter; }
+  if (type === "year") { seconds = YEAR; name = L.vip_year; }
+
+  const now = Math.floor(Date.now() / 1000);
+
+  if (!user.vip_until || user.vip_until < now) {
+    user.vip_until = now + seconds;
+  } else {
+    user.vip_until += seconds; // 续期叠加
+  }
+
+  saveUser(chatId, user);
+
+  return `
+🎉 *VIP ${name} 已开通成功！*
+
+到期时间：
+*${new Date(user.vip_until * 1000).toLocaleString()}*
+
+如需续费请继续充值 ❤️
+  `;
+}
