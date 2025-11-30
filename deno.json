@@ -3,5 +3,8 @@
   "imports": {},
   "compilerOptions": {
     "lib": ["deno.ns", "deno.unstable"]
+  },
+  "deploy": {
+    "entrypoint": "main.ts"
   }
 }
