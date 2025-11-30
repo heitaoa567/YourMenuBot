@@ -1,6 +1,6 @@
 // main.ts
 // =============================================
-// YourMenuBot 入口文件（主机器人）
+// YourMenuBot 主入口（含 AI 对话模式）
 // =============================================
 
 import { LANG } from "./libs/languages.ts";
@@ -24,23 +24,23 @@ import {
   buyVIP 
 } from "./libs/payment.ts";
 
+import { askAI, splitMessage } from "./libs/chatgpt.ts";
+
 import { getUser, saveUser } from "./db/userdb.ts";
 import { runDailyTasks } from "./cron/cron.ts";
 
-// API
 const BOT_TOKEN = Deno.env.get("BOT_TOKEN");
 const TG = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
-// --------------------------
+// ========================
 // 通用发送函数
-// --------------------------
+// ========================
 async function send(chatId: number, text: string, keyboard?: any) {
   const body: any = {
     chat_id: chatId,
     text,
     parse_mode: "Markdown",
   };
-
   if (keyboard) body.reply_markup = keyboard;
 
   await fetch(`${TG}/sendMessage`, {
@@ -76,11 +76,13 @@ Deno.serve(async (req) => {
 
     // 返回主菜单
     if (data === "menu" || data === "back") {
+      user.step = null;
+      await saveUser(chatId, user);
       await send(chatId, L.menu, mainMenu(user));
       return new Response("OK");
     }
 
-    // ========== 语言菜单 ==========
+    // 语言菜单
     if (data === "lang_menu") {
       await send(chatId, "🌐 Select language", languageMenu());
       return new Response("OK");
@@ -94,29 +96,30 @@ Deno.serve(async (req) => {
       return new Response("OK");
     }
 
-    // ========== 推广中心 ==========
+    // AI 对话启动
+    if (data === "ai_start") {
+      user.step = "await_ai";
+      await saveUser(chatId, user);
+      await send(chatId, L.ai_start, mainMenu(user));
+      return new Response("OK");
+    }
+
+    // 推广中心
     if (data === "ref") {
       await send(chatId, handleReferral(chatId), referralMenu(user));
       return new Response("OK");
     }
 
-    // ========== AI 助手介绍 ==========
-    if (data === "ai") {
-      await send(chatId, L.ai_intro, mainMenu(user));
-      return new Response("OK");
-    }
-
-    // ========== VIP ==========
+    // VIP 面板
     if (data === "vip") {
       const now = Math.floor(Date.now() / 1000);
-
       let text = L.vip_normal;
+
       if (user.vip_until && user.vip_until > now) {
         text = `${L.vip_active} *${new Date(user.vip_until * 1000).toLocaleString()}*`;
       }
 
       text += `\n\n${L.vip_buy}`;
-
       await send(chatId, text, vipBuyMenu(user));
       return new Response("OK");
     }
@@ -129,7 +132,7 @@ Deno.serve(async (req) => {
       return new Response("OK");
     }
 
-    // ========== 子机器人入口 ==========
+    // 子机器人菜单
     if (data === "subbot") {
       await send(chatId, "🤖 子机器人管理中心", subBotMenu(user));
       return new Response("OK");
@@ -152,12 +155,12 @@ Deno.serve(async (req) => {
     const msg = update.message;
     const chatId = msg.chat.id;
     const text = msg.text || "";
-    const user = await getUser(chatId);
 
+    const user = await getUser(chatId);
     if (!user.lang) user.lang = "en";
     const L = LANG[user.lang];
 
-    // ========== /start ==========
+    // /start 入口 + 推广参数
     if (text.startsWith("/start")) {
       const args = text.split(" ");
       const ref = args[1];
@@ -182,7 +185,19 @@ ${L.choose_action}
       return new Response("OK");
     }
 
-    // ========== 子机器人绑定 ==========
+    // AI 对话模式
+    if (user.step === "await_ai") {
+      const response = await askAI(chatId, text);
+      const parts = splitMessage(response);
+
+      for (const p of parts) {
+        await send(chatId, p);
+      }
+
+      return new Response("OK");
+    }
+
+    // 子机器人绑定 Token
     if (user.step === "await_subbot_token") {
       user.sub_token = text;
       user.step = null;
@@ -191,7 +206,7 @@ ${L.choose_action}
       return new Response("OK");
     }
 
-    // ========== 支付回执 ==========
+    // 支付回执
     if (text.startsWith("pay")) {
       const txid = text.split(" ")[1];
       const msg = await handlePayment(chatId, txid);
@@ -199,7 +214,7 @@ ${L.choose_action}
       return new Response("OK");
     }
 
-    // 默认返回菜单
+    // 默认回主菜单
     await send(chatId, L.menu, mainMenu(user));
     return new Response("OK");
   }
