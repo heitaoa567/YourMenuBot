@@ -1,70 +1,32 @@
-// referral.ts
-// ======================================================
-// YourMenuBot 推广中心模块（支持 6 国多语言）
-// ======================================================
-
-import { LANG } from "../languages.ts";
 import { getUser, saveUser } from "../db/userdb.ts";
 
-/**
- * 生成推广中心内容
- * @param chatId
- */
-export function handleReferral(chatId: number) {
-  const user = getUser(chatId);
-  const L = LANG[user.lang || "en"];
+export async function recordReferralClick(ownerId: number) {
+  const user = await getUser(ownerId);
+  user.referral_clicks = (user.referral_clicks || 0) + 1;
+  await saveUser(ownerId, user);
+}
 
-  // 用户第一次使用，初始化数据
-  if (!user.referrals) user.referrals = 0;
-  if (!user.referral_clicks) user.referral_clicks = 0;
-  if (!user.referral_income) user.referral_income = 0;
+export async function recordReferral(ownerId: number) {
+  const user = await getUser(ownerId);
+  user.referrals = (user.referrals || 0) + 1;
+  await saveUser(ownerId, user);
+}
 
-  // 专属推广链接（你可以换成你自己的推广域名）
-  const inviteLink = `https://t.me/ButtonMasterr_Bot?start=${chatId}`;
+export function handleReferral(id: number) {
+  const link = `https://t.me/${Deno.env.get("BOT_USERNAME")}?start=${id}`;
 
-  // 推广内容（自动使用不同语言）
-  const text = `
-${L.ref_title}
+  return `
+📣 *推广中心*
 
-${L.ref_desc}
+你的专属邀请链接：
+👉 ${link}
 
-🔗 *${L.ref_link}*
-${inviteLink}
+每邀请 1 位新用户，可以获得返利收益。
 
-${L.ref_stats}
-• 已邀请人数：${user.referrals}
-• 点击次数：${user.referral_clicks}
-• 推广收益：${user.referral_income} USDT
+📊 *你的数据：*
+• 邀请访问：${0}
+• 注册人数：${0}
+
+快去分享你的链接，赚取奖励！
   `;
-
-  saveUser(chatId, user);
-  return text;
-}
-
-/**
- * 记录用户被邀请（用于 /start <id> ）
- * @param inviteId 邀请者
- */
-export function recordReferral(inviteId: number) {
-  const u = getUser(inviteId);
-  if (!u) return;
-
-  if (!u.referrals) u.referrals = 0;
-  u.referrals += 1;
-
-  saveUser(inviteId, u);
-}
-
-/**
- * 记录点击统计（用户点进机器人）
- * @param inviteId
- */
-export function recordReferralClick(inviteId: number) {
-  const u = getUser(inviteId);
-  if (!u) return;
-
-  if (!u.referral_clicks) u.referral_clicks = 0;
-  u.referral_clicks += 1;
-
-  saveUser(inviteId, u);
 }
