@@ -1,87 +1,48 @@
-// ========================================
-//         VIP 插件按钮事件 - callback.ts
-// ========================================
-
+// plugins/vip/callback.ts
 import { VIP_PLANS } from "./plans.ts";
-import { extendVIP } from "./perms.ts";
-import { checkTxid, markPayment } from "./payment.ts";
-import { sendPromotionInfo } from "./affiliate.ts";
+import { addVIPDays } from "./perms.ts";
 import { getUser, saveUser } from "../../db/userdb.ts";
-import { TG } from "../../main.ts";
-import { vipMenu } from "./menu.ts";
+import { ledgerAdd } from "../../wallet/ledger.ts";
 
-// 全局发送函数
-async function sendText(chatId: number, text: string, keyboard?: any) {
-  await fetch(`${TG}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text,
-      parse_mode: "Markdown",
-      reply_markup: keyboard,
-    }),
-  });
-}
+export async function handleVIPCallback(update: any, reply: Function) {
+    if (!update.callback_query) return;
 
-export async function vipOnCallback(chatId: number, data: string, cq: any) {
+    const cq = update.callback_query;
+    const data = cq.data;
+    const chatId = cq.from.id;
 
-  // ==========================
-  // 1. 用户选择套餐 vip_buy_xxx
-  // ==========================
-  if (data.startsWith("vip_buy_")) {
-    const id = data.replace("vip_buy_", "");
-    const plan = VIP_PLANS.find(p => p.id === id);
+    if (!data.startsWith("vip.buy.")) return;
 
-    if (!plan) {
-      await sendText(chatId, "❌ 套餐不存在，请重试。");
-      return "handled";
+    const key = data.replace("vip.buy.", "");
+    const plan = VIP_PLANS[key];
+    if (!plan) return reply(chatId, "❌ 套餐不存在");
+
+    const user = await getUser(chatId);
+
+    // 扣费（检查余额）
+    if ((user.balance || 0) < plan.price) {
+        return reply(chatId,
+            `💰 *余额不足*\n\n当前余额：${user.balance || 0} U\n套餐价格：${plan.price} U`,
+            {
+                inline_keyboard: [
+                    [{ text: "💳 充值 USDT", callback_data: "wallet.deposit" }],
+                    [{ text: "⬅ 返回", callback_data: "menu.back" }]
+                ]
+            }
+        );
     }
 
-    // 保存用户当前选择的套餐
-    const user = await getUser(chatId);
-    user.pending_plan = plan.id;
+    // 扣除余额
+    user.balance -= plan.price;
+
+    // 增加账单记录
+    ledgerAdd(chatId, -plan.price, `购买VIP-${plan.name}`);
+
+    // 增加 VIP 天数
+    addVIPDays(user, plan.days);
+
     await saveUser(chatId, user);
 
-    await sendText(chatId,
-      `💎 你选择了：*${plan.name}*\n\n` +
-      `请支付 *${plan.price} USDT* 至下方地址：\n\n` +
-      `\`${Deno.env.get("USDT_ADDRESS")}\`\n\n` +
-      `支付完成后发送：\n` +
-      `pay 你的TXID`,
-    );
-
-    return "handled";
-  }
-
-  // ==========================
-  // 2. 用户提交支付凭证入口
-  // ==========================
-  if (data === "vip_pay") {
-    await sendText(chatId,
-      "💳 *请发送你的 USDT-TRC20 TxID*\n\n格式：\n`pay TxID_here`",
-    );
-    return "handled";
-  }
-
-  // ==========================
-  // 3. 推广大裂变入口
-  // ==========================
-  if (data === "vip_aff") {
-    const msg = await sendPromotionInfo(chatId);
-    await sendText(chatId, msg);
-    return "handled";
-  }
-
-  // ==========================
-  // 4. 返回主菜单
-  // ==========================
-  if (data === "back") {
-    const menu = await vipMenu(chatId);
-    await sendText(chatId, menu.text, menu.keyboard);
-    return "handled";
-  }
-
-  return "ok";
+    return reply(chatId,
+        `🎉 *购买成功！*\n\n已为你开通：*${plan.name}*\n有效期至：${new Date(user.vip_until).toLocaleString()}`);
 }
-
