@@ -1,26 +1,14 @@
-// ========================================
-//               VIP 插件入口
-//           /plugins/vip/index.ts
-// ========================================
-
-import { registerPlugin } from "../../libs/core/plugins.ts";
-import { registerMenu } from "../../libs/core/menu.ts";
-
+// plugins/vip/index.ts
+import type { BotPlugin } from "../../types.ts";
 import { vipMenu } from "./menu.ts";
-import { vipOnMessage } from "./handler.ts";
-import { vipOnCallback } from "./callback.ts";
+import { handleVIPCallback } from "./callback.ts";
+import { handleVIPCommand } from "./handler.ts";
 
-// 注册插件
-registerPlugin({
-  name: "vip",
-  onMessage: vipOnMessage,
-  onCallback: vipOnCallback,
-  onMenu: vipMenu,
-});
+export const vipPlugin: BotPlugin = {
+    name: "vip",
+    description: "VIP Subscription System",
 
-// 注册菜单（主菜单按钮）
-// 会自动显示： "VIP会员"
-registerMenu("VIP会员", vipMenu);
-
-console.log("[PLUGIN] VIP plugin loaded");
-
+    menu: vipMenu,
+    callbacks: handleVIPCallback,
+    commands: handleVIPCommand
+};
