@@ -1,77 +1,70 @@
+// referral.ts
 // ======================================================
-// 推广系统（点击、注册、收益）
+// YourMenuBot 推广中心模块（支持 6 国多语言）
 // ======================================================
 
-import { getUser, saveUser } from "../db/kv.ts";
+import { LANG } from "../languages.ts";
+import { getUser, saveUser } from "../db/userdb.ts";
 
-// ---------------------------------------------
-// 处理 /start 参数里的推广 ID
-// ---------------------------------------------
-export async function handleReferralStart(myId: number, startPayload: string) {
-  const inviterId = Number(startPayload);
+/**
+ * 生成推广中心内容
+ * @param chatId
+ */
+export function handleReferral(chatId: number) {
+  const user = getUser(chatId);
+  const L = LANG[user.lang || "en"];
 
-  // 自己点自己的邀请链接 → 不计
-  if (!inviterId || inviterId === myId) return;
+  // 用户第一次使用，初始化数据
+  if (!user.referrals) user.referrals = 0;
+  if (!user.referral_clicks) user.referral_clicks = 0;
+  if (!user.referral_income) user.referral_income = 0;
 
-  const inviter = await getUser(inviterId);
+  // 专属推广链接（你可以换成你自己的推广域名）
+  const inviteLink = `https://t.me/ButtonMasterr_Bot?start=${chatId}`;
 
-  // 点击数 +1
-  inviter.referralClicks++;
+  // 推广内容（自动使用不同语言）
+  const text = `
+${L.ref_title}
 
-  // 注册（唯一用户）
-  const me = await getUser(myId);
-  if (!me.referralUsers) {
-    inviter.referralUsers++;
-  }
+${L.ref_desc}
 
-  await saveUser(inviter);
+🔗 *${L.ref_link}*
+${inviteLink}
+
+${L.ref_stats}
+• 已邀请人数：${user.referrals}
+• 点击次数：${user.referral_clicks}
+• 推广收益：${user.referral_income} USDT
+  `;
+
+  saveUser(chatId, user);
+  return text;
 }
 
-// ---------------------------------------------
-// 推广中心内容显示
-// ---------------------------------------------
-export async function getReferralPanel(userId: number, lang: string) {
-  const user = await getUser(userId);
+/**
+ * 记录用户被邀请（用于 /start <id> ）
+ * @param inviteId 邀请者
+ */
+export function recordReferral(inviteId: number) {
+  const u = getUser(inviteId);
+  if (!u) return;
 
-  const clicks = user.referralClicks;
-  const users = user.referralUsers;
-  const income = user.referralIncome;
+  if (!u.referrals) u.referrals = 0;
+  u.referrals += 1;
 
-  if (lang === "zh") {
-    return `
-📣 *推广中心*
-
-您的专属推广链接：
-https://t.me/ButtonMasterr_Bot?start=${userId}
-
-🔹 推广点击：${clicks}
-🔹 有效注册：${users}
-🔹 推广收益：${income} USDT
-
-将上方链接发送给朋友，好友注册 + 充值后即可获得返利。
-`;
-  }
-
-  return `
-📣 *Referral Center*
-
-Your referral link:
-https://t.me/ButtonMasterr_Bot?start=${userId}
-
-🔹 Clicks: ${clicks}
-🔹 Registered users: ${users}
-🔹 Income: ${income} USDT
-
-Share the above link with friends.
-`;
+  saveUser(inviteId, u);
 }
 
-// ---------------------------------------------
-// 推广返利（用户充值后调用）
-// ---------------------------------------------
-export async function addReferralIncome(userId: number, amount: number) {
-  const user = await getUser(userId);
-  user.referralIncome += amount;
-  await saveUser(user);
-}
+/**
+ * 记录点击统计（用户点进机器人）
+ * @param inviteId
+ */
+export function recordReferralClick(inviteId: number) {
+  const u = getUser(inviteId);
+  if (!u) return;
 
+  if (!u.referral_clicks) u.referral_clicks = 0;
+  u.referral_clicks += 1;
+
+  saveUser(inviteId, u);
+}
