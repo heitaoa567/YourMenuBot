@@ -1,94 +1,64 @@
-// ==========================================
-//              YourMenuBot main.ts
-// ==========================================
+// =====================================================
+//                  YourMenuBot - MAIN
+//     系统主入口（Webhook + Router + Admin + 子后台）
+// =====================================================
 
-import { handleCallback, handleMessage, handleMenu } from "./libs/core/router.ts";
-import { Plugins } from "./libs/core/plugins.ts";
+import { Router } from "./router.ts";
+import { handleAdminPanel } from "./admin/index.ts";
+import { handleSubBotPanel } from "./subbot_web/index.ts";
 
-// 自动加载所有插件
-import "./plugins/wallet/index.ts";
-import "./plugins/vip/index.ts";
-import "./plugins/affiliate/index.ts";
-import "./plugins/ads/index.ts";
-import "./plugins/supply/index.ts";
-import "./plugins/subbot/index.ts";
-import "./plugins/ai/index.ts";
-import "./plugins/lang/index.ts";
+// ===============================
+//        环境变量读取
+// ===============================
+const BOT_TOKEN = Deno.env.get("BOT_TOKEN")!;
+const BOT_USERNAME = Deno.env.get("BOT_USERNAME") || "YourMenuBot";
+const OPENAI_KEY = Deno.env.get("OPENAI_API_KEY") || "";
+const USDT_ADDRESS = Deno.env.get("USDT_ADDRESS") || "";
+const PORT = Deno.env.get("PORT") || "8000";
 
-import { TG } from "./config.ts";
-import { getUser, saveUser } from "./db/userdb.ts";
-import { addDepositRequest } from "./plugins/wallet/deposit.ts";
-import { onWithdrawAddress, onWithdrawAmount } from "./plugins/wallet/withdraw.ts";
+console.log(`🚀 YourMenuBot 启动中…`);
+console.log(`🤖 BOT: @${BOT_USERNAME}`);
+console.log(`💰 USDT 地址: ${USDT_ADDRESS}`);
+console.log(`🌐 监听端口: ${PORT}`);
 
-// ==========================================
-//         统一发送函数（全局可调用）
-// ==========================================
-export async function send(chatId: number, text: string, keyboard?: any) {
-  await fetch(`${TG}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text,
-      parse_mode: "Markdown",
-      reply_markup: keyboard
-    }),
-  });
-}
+// ===============================
+//         TELEGRAM API
+// ===============================
+export const TG = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
-// ==========================================
-//             Webhook 主入口
-// ==========================================
-Deno.serve(async (req) => {
+// ===============================
+//           WEBHOOK 入口
+// ===============================
+Deno.serve(
+  {
+    port: Number(PORT),
+  },
+  async (req) => {
+    const url = new URL(req.url);
+    const path = url.pathname;
 
-  const update = await req.json().catch(() => null);
-  if (!update) return new Response("OK");
-
-  // ===============================
-  //       Callback 按钮事件
-  // ===============================
-  if (update.callback_query) {
-    const cq = update.callback_query;
-    const chatId = cq.message.chat.id;
-    const data = cq.data;
-
-    await handleCallback(chatId, data);
-    return new Response("OK");
-  }
-
-  // ===============================
-  //       普通消息事件
-  // ===============================
-  if (update.message) {
-    const msg = update.message;
-    const chatId = msg.chat.id;
-    const text = msg.text || "";
-
-    const user = await getUser(chatId);
-
-    // 提现流程状态机
-    if (user.withdraw_step === "await_address") {
-      await onWithdrawAddress(chatId, text);
-      return new Response("OK");
+    // ========== 1. 主后台 WEB 面板 ==========
+    if (path.startsWith("/admin")) {
+      return await handleAdminPanel(req);
     }
 
-    if (user.withdraw_step === "await_amount") {
-      await onWithdrawAmount(chatId, text);
-      return new Response("OK");
+    // ========== 2. 子机器人 WEB 面板 ==========
+    if (path.startsWith("/subbot_web")) {
+      return await handleSubBotPanel(req);
     }
 
-    // 充值：pay TxID
-    if (text.startsWith("pay ")) {
-      const txid = text.split(" ")[1];
-      const msg = await addDepositRequest(chatId, txid);
-      await send(chatId, msg);
-      return new Response("OK");
+    // ========== 3. Telegram Webhook ==========
+    if (req.method === "POST") {
+      const update = await req.json().catch(() => null);
+      if (!update) return new Response("OK");
+
+      return await Router(update);
     }
 
-    // 其他文本 → 交给插件
-    await handleMessage(chatId, text);
-    return new Response("OK");
-  }
-
-  return new Response("OK");
-});
+    // ========== 4. 默认访问 ==========
+    return new Response(
+      `YourMenuBot Running\nBOT: @${BOT_USERNAME}`,
+      { status: 200 },
+    );
+  },
+);
