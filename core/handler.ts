@@ -1,49 +1,115 @@
-// =============================================================
-//                        core/handler.ts
-//   主消息处理器（Message / CallbackQuery → 插件系统入口）
-// =============================================================
+// ======================================================================
+//                            core/handler.ts
+//         主控制器：调度所有插件（语言 / VIP / 子机器人 / AI / 广播）
+// ======================================================================
 
+import { loadLanguage } from "../plugins/lang/index.ts";
+import * as LangPlugin from "../plugins/lang/index.ts";
+
+import * as SubBot from "../plugins/subbot/main.ts";
+import * as Wallet from "../plugins/wallet/main.ts";
+import * as VIP from "../plugins/vip/main.ts";
+import * as Supply from "../plugins/supply/main.ts";
+import * as Ads from "../plugins/ads/main.ts";
+import * as AI from "../plugins/ai/main.ts";
+import * as Referral from "../plugins/referral/main.ts";
+
+import { getUser, saveUser } from "../db/userdb.ts";
 import { sendText } from "./send.ts";
-import { routerPlugins } from "../plugins/router.ts";
+
 import type { Message, CallbackQuery } from "../types.ts";
 
-// =============================================================
-//                     处理普通消息（text）
-// =============================================================
-export async function handleMessage(msg: Message) {
-  const uid = msg.chat.id;
-  const text = msg.text || "";
 
-  // -------------------------
-  // ① 分发到插件系统
-  // -------------------------
-  const pluginHandled = await routerPlugins.onMessage(uid, text, msg);
-  if (pluginHandled) return pluginHandled;
+// ======================================================================
+//                     插件注册（顺序即优先级）
+// ======================================================================
 
-  // -------------------------
-  // ② 默认处理（没有插件接管）
-  // -------------------------
-  return await sendText(
-    uid,
-    "I received your message.\n(But no plugin handled it yet.)"
-  );
+const plugins = [
+  LangPlugin,   // 语言插件最先执行
+  VIP,
+  Wallet,
+  SubBot,
+  Supply,
+  Ads,
+  AI,
+  Referral,
+];
+
+
+// ======================================================================
+//                      统一分发消息到插件
+// ======================================================================
+export async function handleMessage(message: Message) {
+  const uid = message.chat.id;
+  const text = message.text || "";
+
+  // 自动为新用户加载语言
+  await loadLanguage({ message });
+
+  // 循环插件 onMessage
+  for (const p of plugins) {
+    if (typeof p.onMessage === "function") {
+      const used = await p.onMessage(uid, text, message);
+      if (used) return; // 插件已处理
+    }
+  }
+
+  // 如果插件都没处理 → 显示主菜单
+  await sendText(uid, "⚡ Please choose:", {
+    keyboard: [
+      [{ text: "🌍 Language" }],
+      [{ text: "🤖 My Sub Bots" }],
+      [{ text: "💰 Wallet" }],
+      [{ text: "📢 Broadcast" }],
+      [{ text: "🧠 AI" }],
+      [{ text: "📄 Supply Market" }],
+    ],
+    resize_keyboard: true,
+  });
 }
 
-// =============================================================
-//                 处理按钮回调（callback_query）
-// =============================================================
+
+
+// ======================================================================
+//                     统一分发 CallbackQuery 给插件
+// ======================================================================
 export async function handleCallback(cq: CallbackQuery) {
-  const uid = cq.message.chat.id;
+
+  const uid = cq.from.id;
   const data = cq.data;
 
-  // -------------------------
-  // ① 分发到插件系统
-  // -------------------------
-  const pluginHandled = await routerPlugins.onCallback(uid, data, cq);
-  if (pluginHandled) return pluginHandled;
+  for (const p of plugins) {
+    if (typeof p.onCallback === "function") {
+      const used = await p.onCallback(uid, data, cq);
+      if (used) return;
+    }
+  }
 
-  // -------------------------
-  // ② 默认处理
-  // -------------------------
-  return await sendText(uid, "Button received, but no plugin handled it.");
+  // 没插件处理
+  await sendText(uid, "⚠ Unknown action.");
+}
+
+
+
+// ======================================================================
+//                   Webhook 主入口（由 main.ts 调用）
+// ======================================================================
+export async function handleUpdate(update: any) {
+
+  try {
+    // 消息
+    if (update.message) {
+      await handleMessage(update.message);
+      return;
+    }
+
+    // 回调按钮
+    if (update.callback_query) {
+      await handleCallback(update.callback_query);
+      return;
+    }
+
+  } catch (e) {
+    console.error("Handler ERROR:", e);
+  }
 }
