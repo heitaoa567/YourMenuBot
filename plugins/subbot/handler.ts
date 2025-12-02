@@ -1,107 +1,152 @@
-// ======================================================================
-//                    plugins/subbot/handler.ts
-//     子机器人：处理用户普通消息、广播消息、按钮编辑等入口
-// ======================================================================
+// ===================================================================
+//                  plugins/subbot/handler.ts
+//        子机器人主控制器（消息监听 / 上报 / 统计）
+// ===================================================================
 
+import { getUser } from "../../db/userdb.ts";
+import { getSubBot, saveSubBot } from "../../db/subbotdb.ts";
 import { sendText } from "../../core/send.ts";
-
-import {
-  getSubbot,
-  saveSubbot,
-  getAllSubbots
-} from "../../db/subbotdb.ts";
-
-import type { Message } from "../../types.ts";
+import { getPermissions } from "../../core/permissions.ts";
+import { ADMIN_ID } from "../../config.ts";   // 你自己的 Telegram ID
+import { T } from "../lang/index.ts";
 
 
-// ======================================================================
-//      自动检测：当前消息是否属于子机器人广播输入
-// ======================================================================
-export async function handleSubbotBroadcastInput(
-  uid: number,
-  text: string,
-  msg: Message
-) {
-  const bots = await getAllSubbots();
-
-  // 找到当前用户处于“广播模式”的子机器人
-  const bot = Object.values(bots).find(
-    (b) => b.owner === uid && b.broadcast_mode === true
-  );
-
-  if (!bot) return false; // 不属于 subbot 广播输入
-
-  // 记录广播任务
-  bot.broadcast_history.push({
-    text,
-    time: Date.now()
+// =============== 工具：发送到子机器人 ===============
+async function sendToSubBot(sub: any, body: any) {
+  const url = `https://api.telegram.org/bot${sub.token}/${body.method}`;
+  return await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body.data),
   });
-
-  bot.broadcast_mode = false; // 关闭广播模式
-  await saveSubbot(bot.id, bot);
-
-  // ⚠（这里未来会加入真正群发功能）
-  await sendText(uid, "📡 广播任务已保存（等待发送模块接入）。");
-
-  return true;
 }
 
 
-// ======================================================================
-//                子机器人按钮编辑入口（未来可扩展）
-// ======================================================================
-export async function handleSubbotButtonEdit(
-  uid: number,
-  text: string,
-  msg: Message
-) {
-  // 这里你未来可以做：
-  // 例如用户正在编辑按钮标题 → 保存
-  // 例如等待用户输入 URL → 保存按钮跳转链接
-  // 例如多个按钮行列 → 保存结构
+// ===================================================================
+//            监听子机器人收到的所有消息（用户发消息）
+// ===================================================================
+export async function onSubBotMessage(owner_id: number, update: any) {
+  const sub = await getSubBot(owner_id);
+  if (!sub) return;
 
-  // 目前先返回 false，表示该消息不是按钮编辑
-  return false;
-}
+  const msg = update.message;
+  if (!msg) return;
 
+  const from = msg.from;
+  const user_id = from.id;
+  const first_name = from.first_name || "";
+  const text = msg.text || "";
 
-
-// ======================================================================
-//                       统计：自动更新
-// ======================================================================
-export async function updateSubbotStats(botId: string, event: "msg") {
-  const bot = await getSubbot(botId);
-  if (!bot) return;
-
-  if (event === "msg") {
-    bot.stats.messages++;
+  // ----------- 记录用户进入（放入广播列表）-----------
+  if (!sub.users.includes(user_id)) {
+    sub.users.push(user_id);
+    sub.stats.total_users++;
+    sub.stats.new_today++;
   }
 
-  await saveSubbot(botId, bot);
+  sub.stats.messages_total++;
+  sub.stats.messages_today++;
+
+  await saveSubBot(owner_id, sub);
+
+  // ----------- 上报给主机器人（管理员版监听）-----------
+  await sendText(
+    ADMIN_ID,
+    `📥 <b>用户消息（子机器人监听）</b>\n` +
+    `来自：${first_name} (${user_id})\n` +
+    `子机器人：@${sub.bot_username}\n` +
+    `内容：${text}`
+  );
+
+  // ----------- 上报给 owner（免费用户有次数限制）-----------
+  const owner = await getUser(owner_id);
+  const p = getPermissions(owner);
+
+  if (!p.listen_unlimited) {
+    owner.listen_used = (owner.listen_used || 0) + 1;
+    if (owner.listen_used > 10) {
+      // 免费用户超过监听次数
+      await sendText(
+        owner_id,
+        T(owner.lang, "listen_limit_reached")
+      );
+      return;
+    }
+  }
+
+  await sendText(
+    owner_id,
+    `👤 用户消息\n` +
+    `来自 ${first_name} (${user_id})\n\n` +
+    `${text}`
+  );
 }
 
 
 
-// ======================================================================
-//                       SubBot 消息主入口
-// ======================================================================
-export async function onSubbotMessage(
-  uid: number,
-  text: string,
-  msg: Message
-) {
-  // 按照优先级依次处理：
+// ===================================================================
+//           监听按钮点击（InlineKeyboard 的回调查询）
+// ===================================================================
+export async function onSubBotCallback(owner_id: number, update: any) {
+  const sub = await getSubBot(owner_id);
+  if (!sub) return;
 
-  // ① 广播输入
-  const b = await handleSubbotBroadcastInput(uid, text, msg);
-  if (b) return true;
+  const cq = update.callback_query;
+  if (!cq) return;
 
-  // ② 按钮编辑输入
-  const e = await handleSubbotButtonEdit(uid, text, msg);
-  if (e) return true;
+  const data = cq.data || "";
+  const user = cq.from;
+  const user_id = user.id;
+  const first_name = user.first_name || "";
 
-  // ③ 子机器人普通消息（未来专用子机器人群聊管理模块）
-  // 暂时不处理，返回 false，让主系统继续处理
-  return false;
+  // ----------- 统计按钮点击 ----------
+  sub.stats.button_clicks[data] = (sub.stats.button_clicks[data] || 0) + 1;
+  await saveSubBot(owner_id, sub);
+
+  // ----------- 上报管理员 ----------
+  await sendText(
+    ADMIN_ID,
+    `🔘 <b>按钮点击（子机器人监听）</b>\n` +
+    `按钮：${data}\n` +
+    `来自：${first_name} (${user_id})\n` +
+    `子机器人：@${sub.bot_username}`
+  );
+
+
+  // ----------- 上报 owner（VIP 才无限制） ----------
+  const owner = await getUser(owner_id);
+  const p = getPermissions(owner);
+
+  if (!p.listen_unlimited) {
+    owner.listen_used = (owner.listen_used || 0) + 1;
+    if (owner.listen_used > 10) {
+      await sendText(owner_id, T(owner.lang, "listen_limit_reached"));
+      return;
+    }
+  }
+
+  await sendText(
+    owner_id,
+    `🔘 用户点击按钮\n` +
+    `按钮：${data}\n` +
+    `用户：${first_name} (${user_id})`
+  );
+}
+
+
+
+// ===================================================================
+//        子机器人收到任何 update（消息、callback 全部入口）
+// ===================================================================
+export async function handleSubBotUpdate(owner_id: number, update: any) {
+  if (update.message) {
+    return await onSubBotMessage(owner_id, update);
+  }
+
+  if (update.callback_query) {
+    return await onSubBotCallback(owner_id, update);
+  }
+
+  return;
 }
 
