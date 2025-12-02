@@ -657,4 +657,985 @@ const LANG = {
     },
   },
 
+    // ============================
+  //           Bahasa Indonesia (ID)
+  // ============================
+  id: {
+    system: {
+      error: "Terjadi kesalahan, silakan coba lagi nanti.",
+      success: "Operasi berhasil.",
+      back: "⬅ Kembali",
+      saved: "Pengaturan telah disimpan.",
+    },
+
+    welcome: {
+      start: "Selamat datang di YourMenuBot!\nSilakan pilih menu di bawah ini.",
+      bind_required: "Silakan kirim token sub-bot terlebih dahulu untuk melanjutkan.",
+    },
+
+    menu: {
+      main: "Menu Utama",
+      subbot: "🤖 Manajemen Sub-Bot",
+      ai: "💡 Asisten AI",
+      supply: "📢 Pasar Permintaan & Penawaran",
+      wallet: "💰 Dompet",
+      referral: "🎁 Pusat Referral",
+      vip: "🔧 Pusat VIP",
+      lang: "🌍 Bahasa",
+    },
+
+    lang: {
+      choose: "Silakan pilih bahasa:",
+      switched: "Bahasa telah diubah.",
+    },
+
+    ai: {
+      intro: "Anda dapat menanyakan apa saja di sini.",
+      limit: "Pengguna gratis dapat menggunakan AI selama 30 menit per hari. Tingkatkan ke VIP untuk akses tanpa batas.",
+      ask: "Silakan masukkan pertanyaan Anda:",
+    },
+
+    vip: {
+      title: "Paket VIP",
+      need_vip: "Fitur ini memerlukan VIP.",
+      purchased: "VIP Anda telah diaktifkan.",
+      plans: {
+        week: "VIP 7 Hari – 5 USDT",
+        month: "VIP 30 Hari – 15 USDT",
+        season: "VIP 90 Hari – 38 USDT",
+        year: "VIP 365 Hari – 158 USDT",
+        lifetime: "VIP Seumur Hidup – 388 USDT",
+      },
+      pay_tip: (addr: string) =>
+        `Silakan kirim USDT (TRC20) ke alamat berikut:\n\`${addr}\`\n\nSetelah transfer, kirimkan:\n\n*pay TXID*`,
+      invalid_tx: "Transaksi tidak ditemukan. Silakan periksa TXID Anda.",
+      vip_extended: "VIP Anda telah diperpanjang.",
+    },
+
+    wallet: {
+      title: "Pusat Dompet",
+      balance: (amt: number) => `Saldo Anda: ${amt} USDT`,
+      deposit: {
+        title: "Deposit USDT",
+        tip: (addr: string) =>
+          `Silakan transfer USDT (TRC20) ke alamat berikut:\n\`${addr}\`\n\nSetelah selesai, kirimkan:\n\n*pay TXID*`,
+      },
+      withdraw: {
+        title: "Penarikan",
+        ask_addr: "Masukkan alamat TRC20 untuk penarikan:",
+        ask_amount: "Masukkan jumlah penarikan:",
+        submitted: "Permintaan penarikan Anda telah dikirim.",
+      },
+      history: "Riwayat Transaksi",
+    },
+
+    referral: {
+      title: "Pusat Referral",
+      your_link: (id: number) =>
+        `Tautan referral Anda:\nhttps://t.me/YourMenuBot?start=${id}`,
+      stats: (a: number, b: number, c: number) =>
+        `Referral sukses: ${a}\nKlik: ${b}\nPendapatan: ${c} USDT`,
+      withdraw_tip: "Pendapatan referral akan langsung ditambahkan ke dompet Anda.",
+      promote: "Bagikan tautan Anda untuk mendapatkan hingga 40% komisi!",
+    },
+
+    subbot: {
+      title: "Manajemen Sub-Bot",
+      send_token: "Silakan kirim token sub-bot Anda:",
+      saved: "Token sub-bot berhasil disimpan.",
+      menu: "Pengaturan Sub-Bot",
+      broadcast_basic: "Broadcast Teks (Dasar)",
+      broadcast_pro: "Broadcast Media (VIP)",
+      stats: "Statistik Bot",
+      buttons: "Kelola Tombol",
+    },
+
+    supply: {
+      title: "Pasar Permintaan & Penawaran",
+      post: "Masukkan konten posting baru:",
+      posted: "Posting Anda telah dipublikasikan.",
+      need_vip_top: "Hanya VIP yang dapat memasang posting teratas.",
+      all_visible: "Semua pengguna dapat melihat postingan.",
+    },
+
+    ads: {
+      title: "Pengaturan Iklan",
+      enable: "Aktifkan Iklan",
+      disable: "Nonaktifkan Iklan",
+      vip_hide: "Pengguna VIP tidak melihat iklan.",
+    },
+  },
+
+    // ============================
+  //              Bahasa Melayu (MY)
+  // ============================
+  my: {
+    system: {
+      error: "Ralat berlaku, sila cuba lagi kemudian.",
+      success: "Tindakan berjaya.",
+      back: "⬅ Kembali",
+      saved: "Tetapan telah disimpan.",
+    },
+
+    welcome: {
+      start: "Selamat datang ke YourMenuBot!\nSila pilih fungsi di bawah.",
+      bind_required: "Sila sambungkan token sub-bot terlebih dahulu untuk meneruskan.",
+    },
+
+    menu: {
+      main: "Menu Utama",
+      subbot: "🤖 Pengurusan Sub-Bot",
+      ai: "💡 Pembantu AI",
+      supply: "📢 Pasaran Permintaan & Tawaran",
+      wallet: "💰 Dompet",
+      referral: "🎁 Pusat Rujukan",
+      vip: "🔧 Pusat VIP",
+      lang: "🌍 Bahasa",
+    },
+
+    lang: {
+      choose: "Sila pilih bahasa:",
+      switched: "Bahasa telah ditukar.",
+    },
+
+    ai: {
+      intro: "Anda boleh bertanya apa sahaja di sini.",
+      limit: "Pengguna percuma hanya boleh menggunakan AI selama 30 minit sehari. Naik taraf ke VIP untuk akses tanpa had.",
+      ask: "Sila masukkan soalan anda:",
+    },
+
+    vip: {
+      title: "Pelan VIP",
+      need_vip: "Fungsi ini memerlukan VIP.",
+      purchased: "VIP anda telah diaktifkan.",
+      plans: {
+        week: "VIP 7 Hari – 5 USDT",
+        month: "VIP 30 Hari – 15 USDT",
+        season: "VIP 90 Hari – 38 USDT",
+        year: "VIP 365 Hari – 158 USDT",
+        lifetime: "VIP Seumur Hidup – 388 USDT",
+      },
+      pay_tip: (addr: string) =>
+        `Sila hantar USDT (TRC20) ke alamat berikut:\n\`${addr}\`\n\nSelepas pembayaran, masukkan:\n\n*pay TXID*`,
+      invalid_tx: "Transaksi tidak dijumpai. Sila semak TXID anda.",
+      vip_extended: "VIP anda telah diperbaharui.",
+    },
+
+    wallet: {
+      title: "Pusat Dompet",
+      balance: (amt: number) => `Baki anda: ${amt} USDT`,
+      deposit: {
+        title: "Deposit USDT",
+        tip: (addr: string) =>
+          `Sila pindahkan USDT (TRC20) ke alamat berikut:\n\`${addr}\`\n\nSelepas selesai, masukkan:\n\n*pay TXID*`,
+      },
+      withdraw: {
+        title: "Pengeluaran",
+        ask_addr: "Masukkan alamat TRC20 anda:",
+        ask_amount: "Masukkan jumlah pengeluaran:",
+        submitted: "Permintaan pengeluaran telah dihantar.",
+      },
+      history: "Sejarah Transaksi",
+    },
+
+    referral: {
+      title: "Pusat Rujukan",
+      your_link: (id: number) =>
+        `Pautan rujukan anda:\nhttps://t.me/YourMenuBot?start=${id}`,
+      stats: (a: number, b: number, c: number) =>
+        `Rujukan berjaya: ${a}\nKlik: ${b}\nPendapatan: ${c} USDT`,
+      withdraw_tip: "Pendapatan rujukan akan ditambah ke baki dompet anda secara automatik.",
+      promote: "Kongsi pautan anda dan dapatkan komisen sehingga 40%!",
+    },
+
+    subbot: {
+      title: "Pengurusan Sub-Bot",
+      send_token: "Sila hantar token sub-bot anda:",
+      saved: "Token sub-bot berjaya disimpan.",
+      menu: "Tetapan Sub-Bot",
+      broadcast_basic: "Siaran Teks (Asas)",
+      broadcast_pro: "Siaran Media (VIP)",
+      stats: "Statistik Bot",
+      buttons: "Urus Butang",
+    },
+
+    supply: {
+      title: "Pasaran Permintaan & Tawaran",
+      post: "Masukkan kandungan siaran baharu:",
+      posted: "Siaran anda telah diterbitkan.",
+      need_vip_top: "Hanya pengguna VIP boleh menetapkan siaran di bahagian atas.",
+      all_visible: "Semua pengguna boleh melihat siaran.",
+    },
+
+    ads: {
+      title: "Tetapan Iklan",
+      enable: "Aktifkan Iklan",
+      disable: "Nyahaktifkan Iklan",
+      vip_hide: "Pengguna VIP tidak akan melihat iklan.",
+    },
+  },
+
+    // ============================
+  //                 العربية (AR)
+  // ============================
+  ar: {
+    system: {
+      error: "حدث خطأ، يرجى المحاولة لاحقًا.",
+      success: "تمت العملية بنجاح.",
+      back: "⬅ العودة",
+      saved: "تم حفظ الإعدادات.",
+    },
+
+    welcome: {
+      start: "مرحبًا بك في YourMenuBot!\nيرجى اختيار وظيفة من الأسفل.",
+      bind_required: "يرجى ربط رمز البوت الفرعي أولاً للمتابعة.",
+    },
+
+    menu: {
+      main: "القائمة الرئيسية",
+      subbot: "🤖 إدارة البوت الفرعي",
+      ai: "💡 مساعد الذكاء الاصطناعي",
+      supply: "📢 سوق العرض والطلب",
+      wallet: "💰 المحفظة",
+      referral: "🎁 مركز الإحالة",
+      vip: "🔧 مركز VIP",
+      lang: "🌍 اللغة",
+    },
+
+    lang: {
+      choose: "يرجى اختيار اللغة:",
+      switched: "تم تغيير اللغة.",
+    },
+
+    ai: {
+      intro: "يمكنك طرح أي سؤال هنا.",
+      limit: "يمكن للمستخدمين المجانيين استخدام الذكاء الاصطناعي لمدة 30 دقيقة يوميًا. قم بالترقية إلى VIP للوصول غير المحدود.",
+      ask: "يرجى إدخال سؤالك:",
+    },
+
+    vip: {
+      title: "خطط VIP",
+      need_vip: "هذه الميزة تتطلب VIP.",
+      purchased: "تم تفعيل VIP الخاص بك.",
+      plans: {
+        week: "VIP لمدة 7 أيام – 5 USDT",
+        month: "VIP لمدة 30 يومًا – 15 USDT",
+        season: "VIP لمدة 90 يومًا – 38 USDT",
+        year: "VIP لمدة 365 يومًا – 158 USDT",
+        lifetime: "VIP مدى الحياة – 388 USDT",
+      },
+      pay_tip: (addr: string) =>
+        `يرجى إرسال USDT (TRC20) إلى العنوان التالي:\n\`${addr}\`\n\nبعد الدفع، أدخل:\n\n*pay رقم_المعاملة*`,
+      invalid_tx: "لم يتم العثور على المعاملة. يرجى التحقق من رقم المعاملة.",
+      vip_extended: "تم تمديد مدة VIP الخاصة بك.",
+    },
+
+    wallet: {
+      title: "المحفظة",
+      balance: (amt: number) => `رصيدك: ${amt} USDT`,
+      deposit: {
+        title: "إيداع USDT",
+        tip: (addr: string) =>
+          `يرجى إرسال USDT (TRC20) إلى العنوان:\n\`${addr}\`\n\nبعد الإرسال، أدخل:\n\n*pay رقم_المعاملة*`,
+      },
+      withdraw: {
+        title: "السحب",
+        ask_addr: "يرجى إدخال عنوان TRC20:",
+        ask_amount: "يرجى إدخال المبلغ:",
+        submitted: "تم إرسال طلب السحب.",
+      },
+      history: "سجل المعاملات",
+    },
+
+    referral: {
+      title: "مركز الإحالة",
+      your_link: (id: number) =>
+        `رابط الإحالة الخاص بك:\nhttps://t.me/YourMenuBot?start=${id}`,
+      stats: (a: number, b: number, c: number) =>
+        `الإحالات الناجحة: ${a}\nعدد النقرات: ${b}\nالأرباح: ${c} USDT`,
+      withdraw_tip: "ستتم إضافة عمولات الإحالة إلى رصيد محفظتك.",
+      promote: "شارك رابطك واحصل على عمولة تصل إلى 40٪!",
+    },
+
+    subbot: {
+      title: "إدارة البوت الفرعي",
+      send_token: "يرجى إرسال رمز البوت الفرعي:",
+      saved: "تم حفظ رمز البوت الفرعي.",
+      menu: "إعدادات البوت الفرعي",
+      broadcast_basic: "بث نصي (أساسي)",
+      broadcast_pro: "بث وسائط (VIP)",
+      stats: "إحصائيات البوت",
+      buttons: "إدارة الأزرار",
+    },
+
+    supply: {
+      title: "سوق العرض والطلب",
+      post: "يرجى إدخال محتوى الإعلان الجديد:",
+      posted: "تم نشر إعلانك.",
+      need_vip_top: "تثبيت الإعلان يتطلب VIP.",
+      all_visible: "يمكن لجميع المستخدمين مشاهدة الإعلانات.",
+    },
+
+    ads: {
+      title: "إعدادات الإعلانات",
+      enable: "تفعيل الإعلانات",
+      disable: "إيقاف الإعلانات",
+      vip_hide: "مستخدمو VIP لن يروا الإعلانات.",
+    },
+  },
+
+    // ============================
+  //                Русский (RU)
+  // ============================
+  ru: {
+    system: {
+      error: "Произошла ошибка. Пожалуйста, повторите позже.",
+      success: "Операция успешно выполнена.",
+      back: "⬅ Назад",
+      saved: "Настройки сохранены.",
+    },
+
+    welcome: {
+      start: "Добро пожаловать в YourMenuBot!\nПожалуйста, выберите функцию ниже.",
+      bind_required: "Чтобы продолжить, сначала привяжите токен суб-бота.",
+    },
+
+    menu: {
+      main: "Главное меню",
+      subbot: "🤖 Управление суб-ботом",
+      ai: "💡 AI Ассистент",
+      supply: "📢 Маркетплейс",
+      wallet: "💰 Кошелёк",
+      referral: "🎁 Реферальный центр",
+      vip: "🔧 VIP Центр",
+      lang: "🌍 Язык",
+    },
+
+    lang: {
+      choose: "Выберите язык:",
+      switched: "Язык успешно изменён.",
+    },
+
+    ai: {
+      intro: "Вы можете задать любой вопрос здесь.",
+      limit: "Бесплатные пользователи могут использовать AI только 30 минут в день. VIP — без ограничений.",
+      ask: "Введите ваш вопрос:",
+    },
+
+    vip: {
+      title: "VIP Тарифы",
+      need_vip: "Эта функция доступна только VIP пользователям.",
+      purchased: "Ваш VIP активирован.",
+      plans: {
+        week: "VIP 7 дней – 5 USDT",
+        month: "VIP 30 дней – 15 USDT",
+        season: "VIP 90 дней – 38 USDT",
+        year: "VIP 365 дней – 158 USDT",
+        lifetime: "VIP навсегда – 388 USDT",
+      },
+      pay_tip: (addr: string) =>
+        `Отправьте USDT (TRC20) на адрес:\n\`${addr}\`\n\nПосле отправки введите:\n\n*pay TXID*`,
+      invalid_tx: "Транзакция не найдена. Проверьте TXID.",
+      vip_extended: "Ваш VIP продлён.",
+    },
+
+    wallet: {
+      title: "Кошелёк",
+      balance: (amt: number) => `Ваш баланс: ${amt} USDT`,
+      deposit: {
+        title: "Пополнение USDT",
+        tip: (addr: string) =>
+          `Отправьте USDT (TRC20) на адрес:\n\`${addr}\`\n\nПосле завершения введите:\n\n*pay TXID*`,
+      },
+      withdraw: {
+        title: "Вывод средств",
+        ask_addr: "Введите TRC20 адрес для вывода:",
+        ask_amount: "Введите сумму вывода:",
+        submitted: "Запрос на вывод отправлен.",
+      },
+      history: "История транзакций",
+    },
+
+    referral: {
+      title: "Реферальный центр",
+      your_link: (id: number) =>
+        `Ваша реферальная ссылка:\nhttps://t.me/YourMenuBot?start=${id}`,
+      stats: (a: number, b: number, c: number) =>
+        `Успешные приглашения: ${a}\nКлики: ${b}\nДоход: ${c} USDT`,
+      withdraw_tip: "Реферальный доход автоматически зачисляется на ваш баланс.",
+      promote: "Делитесь ссылкой и получайте до 40% комиссии!",
+    },
+
+    subbot: {
+      title: "Управление суб-ботом",
+      send_token: "Отправьте токен суб-бота:",
+      saved: "Токен успешно сохранён.",
+      menu: "Настройки суб-бота",
+      broadcast_basic: "Текстовая рассылка (базовая)",
+      broadcast_pro: "Медиа рассылка (VIP)",
+      stats: "Статистика бота",
+      buttons: "Управление кнопками",
+    },
+
+    supply: {
+      title: "Маркетплейс",
+      post: "Введите содержание нового объявления:",
+      posted: "Ваше объявление опубликовано.",
+      need_vip_top: "Закрепить объявление могут только VIP пользователи.",
+      all_visible: "Все пользователи могут просматривать объявления.",
+    },
+
+    ads: {
+      title: "Настройки рекламы",
+      enable: "Включить рекламу",
+      disable: "Выключить рекламу",
+      vip_hide: "VIP пользователи не видят рекламу.",
+    },
+  },
+
+    // ============================
+  //               Español (ES)
+  // ============================
+  es: {
+    system: {
+      error: "Ocurrió un error. Por favor, inténtalo más tarde.",
+      success: "Operación completada con éxito.",
+      back: "⬅ Volver",
+      saved: "Configuración guardada.",
+    },
+
+    welcome: {
+      start: "¡Bienvenido a YourMenuBot!\nPor favor, selecciona una función.",
+      bind_required: "Primero debes vincular el token de tu sub-bot para continuar.",
+    },
+
+    menu: {
+      main: "Menú Principal",
+      subbot: "🤖 Administrar Sub-Bot",
+      ai: "💡 Asistente AI",
+      supply: "📢 Mercado",
+      wallet: "💰 Billetera",
+      referral: "🎁 Centro de Referidos",
+      vip: "🔧 Centro VIP",
+      lang: "🌍 Idioma",
+    },
+
+    lang: {
+      choose: "Por favor, selecciona un idioma:",
+      switched: "Idioma cambiado correctamente.",
+    },
+
+    ai: {
+      intro: "Puedes hacer cualquier pregunta aquí.",
+      limit: "Los usuarios gratuitos solo pueden usar AI durante 30 minutos al día. Actualiza a VIP para uso ilimitado.",
+      ask: "Ingresa tu pregunta:",
+    },
+
+    vip: {
+      title: "Planes VIP",
+      need_vip: "Esta función requiere VIP.",
+      purchased: "Tu VIP ha sido activado.",
+      plans: {
+        week: "VIP 7 días – 5 USDT",
+        month: "VIP 30 días – 15 USDT",
+        season: "VIP 90 días – 38 USDT",
+        year: "VIP 365 días – 158 USDT",
+        lifetime: "VIP de por vida – 388 USDT",
+      },
+      pay_tip: (addr: string) =>
+        `Envía USDT (TRC20) a la siguiente dirección:\n\`${addr}\`\n\nDespués del pago, envía:\n\n*pay TXID*`,
+      invalid_tx: "Transacción no encontrada. Verifica el TXID.",
+      vip_extended: "Tu suscripción VIP ha sido renovada.",
+    },
+
+    wallet: {
+      title: "Billetera",
+      balance: (amt: number) => `Tu saldo: ${amt} USDT`,
+      deposit: {
+        title: "Depositar USDT",
+        tip: (addr: string) =>
+          `Envía USDT (TRC20) a la dirección:\n\`${addr}\`\n\nCuando termines, envía:\n\n*pay TXID*`,
+      },
+      withdraw: {
+        title: "Retirar",
+        ask_addr: "Ingresa tu dirección TRC20:",
+        ask_amount: "Ingresa la cantidad a retirar:",
+        submitted: "Tu solicitud de retiro ha sido enviada.",
+      },
+      history: "Historial de Transacciones",
+    },
+
+    referral: {
+      title: "Centro de Referidos",
+      your_link: (id: number) =>
+        `Tu enlace de referido:\nhttps://t.me/YourMenuBot?start=${id}`,
+      stats: (a, b, c) =>
+        `Referidos exitosos: ${a}\nClics: ${b}\nGanancias: ${c} USDT`,
+      withdraw_tip: "Las ganancias de referidos se añaden automáticamente a tu billetera.",
+      promote: "Comparte tu enlace y gana hasta 40% de comisión.",
+    },
+
+    subbot: {
+      title: "Administrar Sub-Bot",
+      send_token: "Envía el token de tu sub-bot:",
+      saved: "Token del sub-bot guardado.",
+      menu: "Configuración del Sub-Bot",
+      broadcast_basic: "Difusión de texto (Básico)",
+      broadcast_pro: "Difusión de medios (VIP)",
+      stats: "Estadísticas del Bot",
+      buttons: "Administrar Botones",
+    },
+
+    supply: {
+      title: "Mercado",
+      post: "Ingresa el contenido de tu publicación:",
+      posted: "Tu publicación ha sido publicada.",
+      need_vip_top: "Solo los usuarios VIP pueden fijar publicaciones.",
+      all_visible: "Todos los usuarios pueden ver el mercado.",
+    },
+
+    ads: {
+      title: "Configuración de Anuncios",
+      enable: "Activar anuncios",
+      disable: "Desactivar anuncios",
+      vip_hide: "Los usuarios VIP no ven anuncios.",
+    },
+  },
+
   
+    // ============================
+  //            Português (PT)
+  // ============================
+  pt: {
+    system: {
+      error: "Ocorreu um erro. Tente novamente mais tarde.",
+      success: "Operação concluída com sucesso.",
+      back: "⬅ Voltar",
+      saved: "Configurações salvas.",
+    },
+
+    welcome: {
+      start: "Bem-vindo ao YourMenuBot!\nPor favor, escolha uma função abaixo.",
+      bind_required: "Você deve vincular o token do sub-bot antes de continuar.",
+    },
+
+    menu: {
+      main: "Menu Principal",
+      subbot: "🤖 Gerenciar Sub-Bot",
+      ai: "💡 Assistente de IA",
+      supply: "📢 Mercado",
+      wallet: "💰 Carteira",
+      referral: "🎁 Centro de Indicações",
+      vip: "🔧 Centro VIP",
+      lang: "🌍 Idioma",
+    },
+
+    lang: {
+      choose: "Escolha seu idioma:",
+      switched: "Idioma alterado com sucesso.",
+    },
+
+    ai: {
+      intro: "Aqui você pode fazer qualquer pergunta.",
+      limit: "Usuários gratuitos podem usar a IA por apenas 30 minutos por dia. Atualize para VIP para uso ilimitado.",
+      ask: "Digite sua pergunta:",
+    },
+
+    vip: {
+      title: "Planos VIP",
+      need_vip: "Esta função requer VIP.",
+      purchased: "Seu VIP foi ativado.",
+      plans: {
+        week: "VIP 7 dias – 5 USDT",
+        month: "VIP 30 dias – 15 USDT",
+        season: "VIP 90 dias – 38 USDT",
+        year: "VIP 365 dias – 158 USDT",
+        lifetime: "VIP vitalício – 388 USDT",
+      },
+      pay_tip: (addr: string) =>
+        `Envie USDT (TRC20) para o endereço abaixo:\n\`${addr}\`\n\nApós o pagamento, envie:\n\n*pay TXID*`,
+      invalid_tx: "Transação não encontrada. Verifique o TXID.",
+      vip_extended: "Seu VIP foi renovado.",
+    },
+
+    wallet: {
+      title: "Carteira",
+      balance: (amt: number) => `Seu saldo: ${amt} USDT`,
+      deposit: {
+        title: "Depositar USDT",
+        tip: (addr: string) =>
+          `Envie USDT (TRC20) para o endereço:\n\`${addr}\`\n\nQuando finalizar, envie:\n\n*pay TXID*`,
+      },
+      withdraw: {
+        title: "Saque",
+        ask_addr: "Digite seu endereço TRC20:",
+        ask_amount: "Digite o valor do saque:",
+        submitted: "Seu pedido de saque foi enviado.",
+      },
+      history: "Histórico de Transações",
+    },
+
+    referral: {
+      title: "Centro de Indicações",
+      your_link: (id: number) =>
+        `Seu link de indicação:\nhttps://t.me/YourMenuBot?start=${id}`,
+      stats: (a, b, c) =>
+        `Indicações concluídas: ${a}\nCliques: ${b}\nGanhos: ${c} USDT`,
+      withdraw_tip: "Os ganhos de indicação serão adicionados automaticamente à sua carteira.",
+      promote: "Compartilhe seu link e ganhe até 40% de comissão!",
+    },
+
+    subbot: {
+      title: "Gerenciar Sub-Bot",
+      send_token: "Envie o token do seu sub-bot:",
+      saved: "Token salvo com sucesso.",
+      menu: "Configurações do Sub-Bot",
+      broadcast_basic: "Envio de texto (Básico)",
+      broadcast_pro: "Envio de mídia (VIP)",
+      stats: "Estatísticas do Bot",
+      buttons: "Gerenciar Botões",
+    },
+
+    supply: {
+      title: "Mercado",
+      post: "Digite o conteúdo da nova publicação:",
+      posted: "Sua publicação foi enviada.",
+      need_vip_top: "Apenas VIP pode fixar publicações.",
+      all_visible: "Todos os usuários podem ver as publicações.",
+    },
+
+    ads: {
+      title: "Configurações de Anúncios",
+      enable: "Ativar anúncios",
+      disable: "Desativar anúncios",
+      vip_hide: "Usuários VIP não veem anúncios.",
+    },
+  },
+
+    // ============================
+  //              Italiano (IT)
+  // ============================
+  it: {
+    system: {
+      error: "Si è verificato un errore. Per favore riprova più tardi.",
+      success: "Operazione completata con successo.",
+      back: "⬅ Indietro",
+      saved: "Impostazioni salvate.",
+    },
+
+    welcome: {
+      start: "Benvenuto su YourMenuBot!\nSeleziona una funzione dal menu qui sotto.",
+      bind_required: "Per favore collega il token del tuo sub-bot prima di continuare.",
+    },
+
+    menu: {
+      main: "Menu Principale",
+      subbot: "🤖 Gestione Sub-Bot",
+      ai: "💡 Assistente AI",
+      supply: "📢 Mercato",
+      wallet: "💰 Portafoglio",
+      referral: "🎁 Centro Referral",
+      vip: "🔧 Centro VIP",
+      lang: "🌍 Lingua",
+    },
+
+    lang: {
+      choose: "Seleziona una lingua:",
+      switched: "Lingua cambiata con successo.",
+    },
+
+    ai: {
+      intro: "Puoi porre qualsiasi domanda qui.",
+      limit: "Gli utenti gratuiti possono usare l'AI solo per 30 minuti al giorno. Aggiorna a VIP per utilizzo illimitato.",
+      ask: "Inserisci la tua domanda:",
+    },
+
+    vip: {
+      title: "Piani VIP",
+      need_vip: "Questa funzione richiede un abbonamento VIP.",
+      purchased: "Il tuo VIP è stato attivato!",
+      plans: {
+        week: "VIP 7 giorni – 5 USDT",
+        month: "VIP 30 giorni – 15 USDT",
+        season: "VIP 90 giorni – 38 USDT",
+        year: "VIP 365 giorni – 158 USDT",
+        lifetime: "VIP a vita – 388 USDT",
+      },
+      pay_tip: (addr: string) =>
+        `Invia USDT (TRC20) al seguente indirizzo:\n\`${addr}\`\n\nDopo il pagamento invia:\n\n*pay TXID*`,
+      invalid_tx: "Transazione non trovata. Controlla il TXID.",
+      vip_extended: "Il tuo abbonamento VIP è stato esteso.",
+    },
+
+    wallet: {
+      title: "Portafoglio",
+      balance: (amt: number) => `Saldo: ${amt} USDT`,
+      deposit: {
+        title: "Deposita USDT",
+        tip: (addr: string) =>
+          `Invia USDT (TRC20) a:\n\`${addr}\`\n\nQuando hai finito, invia:\n\n*pay TXID*`,
+      },
+      withdraw: {
+        title: "Prelievo",
+        ask_addr: "Inserisci il tuo indirizzo TRC20:",
+        ask_amount: "Inserisci l'importo da prelevare:",
+        submitted: "La tua richiesta di prelievo è stata inviata.",
+      },
+      history: "Storico Transazioni",
+    },
+
+    referral: {
+      title: "Centro Referral",
+      your_link: (id: number) =>
+        `Il tuo link referral:\nhttps://t.me/YourMenuBot?start=${id}`,
+      stats: (a, b, c) =>
+        `Referral completati: ${a}\nClic: ${b}\nGuadagni: ${c} USDT`,
+      withdraw_tip: "I guadagni referral vengono aggiunti automaticamente al portafoglio.",
+      promote: "Condividi il link e guadagna fino al 40% di commissioni.",
+    },
+
+    subbot: {
+      title: "Gestione Sub-Bot",
+      send_token: "Invia il token del tuo sub-bot:",
+      saved: "Token salvato correttamente.",
+      menu: "Impostazioni Sub-Bot",
+      broadcast_basic: "Broadcast di testo (Base)",
+      broadcast_pro: "Broadcast multimediale (VIP)",
+      stats: "Statistiche Bot",
+      buttons: "Gestione Bottoni",
+    },
+
+    supply: {
+      title: "Mercato",
+      post: "Inserisci il contenuto dell'annuncio:",
+      posted: "Il tuo annuncio è stato pubblicato.",
+      need_vip_top: "Solo utenti VIP possono fissare gli annunci.",
+      all_visible: "Tutti gli utenti possono vedere il mercato.",
+    },
+
+    ads: {
+      title: "Gestione Pubblicità",
+      enable: "Attiva pubblicità",
+      disable: "Disattiva pubblicità",
+      vip_hide: "Gli utenti VIP non visualizzano pubblicità.",
+    },
+  },
+
+    // ============================
+  //               Français (FR)
+  // ============================
+  fr: {
+    system: {
+      error: "Une erreur est survenue. Veuillez réessayer plus tard.",
+      success: "Opération effectuée avec succès.",
+      back: "⬅ Retour",
+      saved: "Configuration enregistrée.",
+    },
+
+    welcome: {
+      start: "Bienvenue sur YourMenuBot !\nVeuillez choisir une fonction ci-dessous.",
+      bind_required: "Vous devez d'abord lier le token de votre sous-bot.",
+    },
+
+    menu: {
+      main: "Menu Principal",
+      subbot: "🤖 Gérer le Sous-Bot",
+      ai: "💡 Assistant IA",
+      supply: "📢 Marché",
+      wallet: "💰 Portefeuille",
+      referral: "🎁 Parrainage",
+      vip: "🔧 Centre VIP",
+      lang: "🌍 Langue",
+    },
+
+    lang: {
+      choose: "Choisissez votre langue :",
+      switched: "Langue changée avec succès.",
+    },
+
+    ai: {
+      intro: "Vous pouvez poser n'importe quelle question ici.",
+      limit: "Les utilisateurs gratuits peuvent utiliser l'IA pendant 30 minutes par jour. Passez en VIP pour un usage illimité.",
+      ask: "Entrez votre question :",
+    },
+
+    vip: {
+      title: "Plans VIP",
+      need_vip: "Cette fonctionnalité nécessite un abonnement VIP.",
+      purchased: "Votre VIP a été activé.",
+      plans: {
+        week: "VIP 7 jours – 5 USDT",
+        month: "VIP 30 jours – 15 USDT",
+        season: "VIP 90 jours – 38 USDT",
+        year: "VIP 365 jours – 158 USDT",
+        lifetime: "VIP à vie – 388 USDT",
+      },
+      pay_tip: (addr: string) =>
+        `Envoyez des USDT (TRC20) à l'adresse suivante :\n\`${addr}\`\n\nUne fois le paiement effectué, envoyez :\n\n*pay TXID*`,
+      invalid_tx: "Transaction introuvable. Vérifiez le TXID.",
+      vip_extended: "Votre abonnement VIP a été prolongé.",
+    },
+
+    wallet: {
+      title: "Portefeuille",
+      balance: (amt: number) => `Solde : ${amt} USDT`,
+      deposit: {
+        title: "Déposer des USDT",
+        tip: (addr: string) =>
+          `Envoyez des USDT (TRC20) à l'adresse :\n\`${addr}\`\n\nUne fois terminé, envoyez :\n\n*pay TXID*`,
+      },
+      withdraw: {
+        title: "Retrait",
+        ask_addr: "Entrez votre adresse TRC20 :",
+        ask_amount: "Entrez le montant à retirer :",
+        submitted: "Votre demande de retrait a été envoyée.",
+      },
+      history: "Historique des Transactions",
+    },
+
+    referral: {
+      title: "Centre de Parrainage",
+      your_link: (id: number) =>
+        `Votre lien de parrainage :\nhttps://t.me/YourMenuBot?start=${id}`,
+      stats: (a, b, c) =>
+        `Parrainages réussis : ${a}\nClics : ${b}\nGains : ${c} USDT`,
+      withdraw_tip: "Les gains de parrainage sont automatiquement ajoutés à votre portefeuille.",
+      promote: "Partagez votre lien et gagnez jusqu'à 40% de commission.",
+    },
+
+    subbot: {
+      title: "Gérer le Sous-Bot",
+      send_token: "Envoyez le token de votre sous-bot :",
+      saved: "Token enregistré.",
+      menu: "Paramètres du Sous-Bot",
+      broadcast_basic: "Diffusion texte (Basique)",
+      broadcast_pro: "Diffusion média (VIP)",
+      stats: "Statistiques du Bot",
+      buttons: "Gérer les Boutons",
+    },
+
+    supply: {
+      title: "Marché",
+      post: "Entrez le contenu de votre annonce :",
+      posted: "Votre annonce a été publiée.",
+      need_vip_top: "Seuls les VIP peuvent mettre en avant leurs annonces.",
+      all_visible: "Tous les utilisateurs peuvent voir les annonces.",
+    },
+
+    ads: {
+      title: "Gestion des Publicités",
+      enable: "Activer les publicités",
+      disable: "Désactiver les publicités",
+      vip_hide: "Les membres VIP ne voient aucune publicité.",
+    },
+  },
+
+    // ============================
+  //               Deutsch (DE)
+  // ============================
+  de: {
+    system: {
+      error: "Ein Fehler ist aufgetreten. Bitte versuche es später erneut.",
+      success: "Operation erfolgreich abgeschlossen.",
+      back: "⬅ Zurück",
+      saved: "Einstellungen gespeichert.",
+    },
+
+    welcome: {
+      start: "Willkommen bei YourMenuBot!\nBitte wähle eine Funktion aus.",
+      bind_required: "Bitte verbinde zuerst den Token deines Sub-Bots.",
+    },
+
+    menu: {
+      main: "Hauptmenü",
+      subbot: "🤖 Sub-Bot verwalten",
+      ai: "💡 KI-Assistent",
+      supply: "📢 Marktplatz",
+      wallet: "💰 Wallet",
+      referral: "🎁 Empfehlungscenter",
+      vip: "🔧 VIP-Bereich",
+      lang: "🌍 Sprache",
+    },
+
+    lang: {
+      choose: "Bitte wähle eine Sprache:",
+      switched: "Sprache erfolgreich geändert.",
+    },
+
+    ai: {
+      intro: "Du kannst hier jede Frage stellen.",
+      limit: "Kostenlose Nutzer können die KI nur 30 Minuten pro Tag verwenden. Upgrade auf VIP für unbegrenzte Nutzung.",
+      ask: "Gib deine Frage ein:",
+    },
+
+    vip: {
+      title: "VIP-Pakete",
+      need_vip: "Diese Funktion erfordert VIP.",
+      purchased: "Dein VIP wurde aktiviert.",
+      plans: {
+        week: "VIP 7 Tage – 5 USDT",
+        month: "VIP 30 Tage – 15 USDT",
+        season: "VIP 90 Tage – 38 USDT",
+        year: "VIP 365 Tage – 158 USDT",
+        lifetime: "Lebenslang VIP – 388 USDT",
+      },
+      pay_tip: (addr: string) =>
+        `Sende USDT (TRC20) an folgende Adresse:\n\`${addr}\`\n\nNach dem Senden gib ein:\n\n*pay TXID*`,
+      invalid_tx: "Transaktion nicht gefunden. Bitte TXID überprüfen.",
+      vip_extended: "Dein VIP wurde verlängert.",
+    },
+
+    wallet: {
+      title: "Wallet",
+      balance: (amt: number) => `Dein Guthaben: ${amt} USDT`,
+      deposit: {
+        title: "USDT einzahlen",
+        tip: (addr: string) =>
+          `Sende USDT (TRC20) an:\n\`${addr}\`\n\nWenn du fertig bist, sende:\n\n*pay TXID*`,
+      },
+      withdraw: {
+        title: "Auszahlung",
+        ask_addr: "Gib deine TRC20-Adresse ein:",
+        ask_amount: "Gib den Auszahlungsbetrag ein:",
+        submitted: "Deine Auszahlungsanfrage wurde gesendet.",
+      },
+      history: "Transaktionsverlauf",
+    },
+
+    referral: {
+      title: "Empfehlungscenter",
+      your_link: (id: number) =>
+        `Dein Empfehlungslink:\nhttps://t.me/YourMenuBot?start=${id}`,
+      stats: (a, b, c) =>
+        `Erfolgreiche Empfehlungen: ${a}\nKlicks: ${b}\nEinnahmen: ${c} USDT`,
+      withdraw_tip: "Empfehlungsgewinne werden automatisch deinem Wallet gutgeschrieben.",
+      promote: "Teile deinen Link und verdiene bis zu 40% Provision!",
+    },
+
+    subbot: {
+      title: "Sub-Bot Verwaltung",
+      send_token: "Sende den Token deines Sub-Bots:",
+      saved: "Token erfolgreich gespeichert.",
+      menu: "Sub-Bot Einstellungen",
+      broadcast_basic: "Text-Broadcast (Basis)",
+      broadcast_pro: "Medien-Broadcast (VIP)",
+      stats: "Bot-Statistiken",
+      buttons: "Buttons verwalten",
+    },
+
+    supply: {
+      title: "Marktplatz",
+      post: "Gib den Inhalt deiner Anzeige ein:",
+      posted: "Deine Anzeige wurde veröffentlicht.",
+      need_vip_top: "Nur VIP-Benutzer können Anzeigen anheften.",
+      all_visible: "Alle Benutzer können den Marktplatz sehen.",
+    },
+
+    ads: {
+      title: "Werbung verwalten",
+      enable: "Werbung aktivieren",
+      disable: "Werbung deaktivieren",
+      vip_hide: "VIP-Benutzer sehen keine Werbung.",
+    },
+  },
+
