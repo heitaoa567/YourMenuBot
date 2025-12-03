@@ -1,140 +1,163 @@
-// ======================================
-//              subbotdb.ts
-//   子机器人数据库（Token + 菜单 + 广播 + 限制）
-// ======================================
+// ======================================================================
+//                           db/subbotdb.ts
+//       子机器人数据库（Token / 用户 / 按钮 / 统计 / 广播）
+// ======================================================================
 
-export interface SubBotData {
-  owner_id: number;         // 主人 Telegram ID
-  bot_token: string;        // 机器人 Token
-  username?: string;        // 机器人 @username
-  title?: string;           // 机器人名称
+import {
+  SubBotData,
+  SubBotButton,
+  SubBotUser,
+} from "../types.ts";
 
-  // 菜单 & 按钮
-  buttons: any[];           // 九宫格按钮配置（数组形式）
-  menus: Record<string, any>; // 子机器人页面菜单配置
+const FILE = "./db/data/subbots.json";
 
-  // 广播
-  broadcast_used: number;   // 当日广播次数
-  last_broadcast_reset: number;
+// 内存缓存
+let cache: Record<number, SubBotData> = {};
 
-  // VIP 独立体系（可选）
-  sub_vip_until?: number;   // 子机器人 VIP 到期时间（如果你以后想卖子bot VIP）
 
-  // 监听状态
-  listener_enabled: boolean;
-
-  // 统计
-  total_users: number;
-  total_messages: number;
-  total_clicks: number;
-
-  // 创建时间
-  created_at: number;
+// ======================================================================
+//                      加载数据库
+// ======================================================================
+async function loadDB() {
+  try {
+    const text = await Deno.readTextFile(FILE);
+    cache = JSON.parse(text);
+  } catch {
+    console.warn("⚠️ subbots.json 不存在，正在创建...");
+    cache = {};
+    await saveDB();
+  }
 }
 
-const kv = await Deno.openKv();
 
-// ===============================
-// 初始化子机器人
-// ===============================
-export function createEmptySubBot(chatId: number, token: string): SubBotData {
-  return {
-    owner_id: chatId,
-    bot_token: token,
+// ======================================================================
+//                      保存数据库
+// ======================================================================
+async function saveDB() {
+  await Deno.writeTextFile(FILE, JSON.stringify(cache, null, 2));
+}
 
-    buttons: [],
-    menus: {},
 
-    broadcast_used: 0,
-    last_broadcast_reset: Date.now(),
+// ======================================================================
+//                   获取子机器人数据（自动初始化）
+// ======================================================================
+export async function getSubBot(owner_id: number): Promise<SubBotData | null> {
+  if (Object.keys(cache).length === 0) await loadDB();
+  return cache[owner_id] || null;
+}
 
-    listener_enabled: false,
 
-    total_users: 0,
-    total_messages: 0,
-    total_clicks: 0,
+// ======================================================================
+//                   创建 / 保存 子机器人
+// ======================================================================
+export async function saveSubBot(owner_id: number, data: SubBotData) {
+  cache[owner_id] = data;
+  await saveDB();
+}
+
+
+// ======================================================================
+//                    新增子机器人（首次绑定）
+// ======================================================================
+export async function createSubBot(
+  owner_id: number,
+  bot_token: string,
+  bot_username: string,
+  bot_id: number
+): Promise<SubBotData> {
+  if (Object.keys(cache).length === 0) await loadDB();
+
+  const bot: SubBotData = {
+    owner_id,
+    bot_token,
+    bot_user: bot_username,
+    bot_id,
 
     created_at: Date.now(),
+
+    buttons: [],
+
+    users: [],
+
+    stats: {
+      total_users: 0,
+      new_users_today: 0,
+      clicks: 0,
+    },
   };
-}
 
-// ===============================
-// 获取子机器人（自动初始化）
-// ===============================
-export async function getSubBot(token: string): Promise<SubBotData | null> {
-  const res = await kv.get<SubBotData>(["subbot", token]);
-  return res.value || null;
-}
-
-// ===============================
-// 保存子机器人
-// ===============================
-export async function saveSubBot(token: string, data: SubBotData) {
-  await kv.set(["subbot", token], data);
-}
-
-// ===============================
-// 绑定子机器人
-// ===============================
-export async function bindSubBot(chatId: number, token: string) {
-  const bot = createEmptySubBot(chatId, token);
-  await saveSubBot(token, bot);
+  cache[owner_id] = bot;
+  await saveDB();
 
   return bot;
 }
 
-// ===============================
-// 更新子机器人（部分）
-// ===============================
-export async function updateSubBot(token: string, patch: Partial<SubBotData>) {
-  const bot = await getSubBot(token);
+
+// ======================================================================
+//                      子机器人：保存用户
+// ======================================================================
+export async function addSubBotUser(
+  owner_id: number,
+  u: SubBotUser
+) {
+  const bot = await getSubBot(owner_id);
   if (!bot) return;
 
-  const updated = { ...bot, ...patch };
-  await kv.set(["subbot", token], updated);
+  // 不重复添加
+  if (bot.users.some((x) => x.id === u.id)) return;
+
+  bot.users.push(u);
+
+  // 更新统计
+  bot.stats.total_users++;
+  bot.stats.new_users_today++;
+
+  await saveSubBot(owner_id, bot);
 }
 
-// ===============================
-// 重置广播限制（每日）
-// ===============================
-export async function resetSubBotDaily(token: string) {
-  const bot = await getSubBot(token);
+
+// ======================================================================
+//                      子机器人：按钮管理
+// ======================================================================
+export async function setSubBotButtons(
+  owner_id: number,
+  list: SubBotButton[]
+) {
+  const bot = await getSubBot(owner_id);
   if (!bot) return;
 
-  const now = Date.now();
-  const last = bot.last_broadcast_reset;
-
-  const isNewDay = new Date(now).getUTCDate() !== new Date(last).getUTCDate();
-
-  if (isNewDay) {
-    bot.broadcast_used = 0;
-    bot.last_broadcast_reset = now;
-    await saveSubBot(token, bot);
-  }
+  bot.buttons = list;
+  await saveSubBot(owner_id, bot);
 }
 
-// ===============================
-// 列出所有子机器人
-// ===============================
-export async function listAllSubBots(): Promise<SubBotData[]> {
-  const list: SubBotData[] = [];
-  for await (const entry of kv.list<SubBotData>({ prefix: ["subbot"] })) {
-    if (entry.value) list.push(entry.value);
-  }
-  return list;
-}
 
-// ===============================
-// 增加统计数据
-// ===============================
-export async function addStat(token: string, field: "users" | "messages" | "clicks") {
-  const bot = await getSubBot(token);
+// ======================================================================
+//                  子机器人：记录按钮点击统计
+// ======================================================================
+export async function addClick(owner_id: number) {
+  const bot = await getSubBot(owner_id);
   if (!bot) return;
 
-  if (field === "users") bot.total_users++;
-  if (field === "messages") bot.total_messages++;
-  if (field === "clicks") bot.total_clicks++;
+  bot.stats.clicks++;
+  await saveSubBot(owner_id, bot);
+}
 
-  await saveSubBot(token, bot);
+
+// ======================================================================
+//                  获取所有子机器人（后台用）
+// ======================================================================
+export async function getAllSubBots(): Promise<SubBotData[]> {
+  if (Object.keys(cache).length === 0) await loadDB();
+  return Object.values(cache);
+}
+
+
+// ======================================================================
+//                    删除子机器人（可选接口）
+// ======================================================================
+export async function deleteSubBot(owner_id: number) {
+  if (Object.keys(cache).length === 0) await loadDB();
+  delete cache[owner_id];
+  await saveDB();
 }
 
