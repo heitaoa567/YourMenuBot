@@ -293,4 +293,29 @@ export function setupAdminCallbacks(router: Router) {
     await sendMsg(ctx, "🔗 请发送 广播文本+按钮JSON：");
   });
 
+
+  // ======================================================
+// 🧾 钱包系统子菜单（余额 / 充值 / 提现 / 账单）
+// ======================================================
+
+// 📊 用户余额总览
+router.callback("admin_wallet_balance", async (ctx) => {
+  await ctx.reply("📊 查询用户余额中…（对接 wallet/balance.ts）");
+});
+
+// 📥 充值记录
+router.callback("admin_wallet_deposit", async (ctx) => {
+  await ctx.reply("📥 查询充值记录中…（对接 wallet/deposit.ts）");
+});
+
+// 📤 提现记录
+router.callback("admin_wallet_withdraw", async (ctx) => {
+  await ctx.reply("📤 查询提现记录中…（对接 wallet/withdraw.ts）");
+});
+
+// 📑 钱包账单流水
+router.callback("admin_wallet_ledger", async (ctx) => {
+  await ctx.reply("📑 查询账单流水…（对接 wallet/ledger.ts）");
+});
+
 }
