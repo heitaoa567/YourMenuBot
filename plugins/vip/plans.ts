@@ -1,37 +1,27 @@
 // ======================================================================
-//                        plugins/vip/plans.ts
-//                VIP 套餐列表（用于菜单显示）
+//                       plugins/vip/plans.ts
+//     VIP 套餐配置（你设定的价格：周5 / 月15 / 季38 / 年158 / 终身888）
 // ======================================================================
 
-import { T } from "../lang/index.ts";
-
-// 你的 VIP 套餐价格（USDT）
-export const VIP_PRICES = {
-  weekly: 5,      // 7 天
-  monthly: 15,    // 30 天
-  season: 38,     // 90 天
-  yearly: 158,    // 365 天
-  lifetime: 888,  // 永久
+export const VIP_PLANS = {
+  weekly:  { days: 7,   price: 5 },
+  monthly: { days: 30,  price: 15 },
+  season:  { days: 90,  price: 38 },
+  yearly:  { days: 365, price: 158 },
+  lifetime:{ days: 36500, price: 888 }, // 等同永久
 };
 
+// 格式化价格文本
+export function formatPlans() {
+  return `
+🎖 <b>VIP 套餐价格</b>
 
-// 为用户展示 VIP 套餐菜单
-export function buildVipPlansMenu(lang: string) {
-  const txt = T(lang, "vip_plans_title");
+📅 周卡：5 USDT  
+🗓 月卡：15 USDT  
+📆 季卡：38 USDT  
+📌 年卡：158 USDT  
+💎 终身 VIP：888 USDT  
 
-  return {
-    text: txt,
-    keyboard: {
-      inline_keyboard: [
-        [{ text: `⭐ 7 Days — ${VIP_PRICES.weekly} USDT`, callback_data: "vip_buy_weekly" }],
-        [{ text: `🌙 30 Days — ${VIP_PRICES.monthly} USDT`, callback_data: "vip_buy_monthly" }],
-        [{ text: `🌤️ 90 Days — ${VIP_PRICES.season} USDT`, callback_data: "vip_buy_season" }],
-        [{ text: `📅 365 Days — ${VIP_PRICES.yearly} USDT`, callback_data: "vip_buy_yearly" }],
-        [{ text: `💎 Lifetime — ${VIP_PRICES.lifetime} USDT`, callback_data: "vip_buy_lifetime" }],
-
-        [{ text: "⬅ Back", callback_data: "back_to_main" }],
-      ]
-    }
-  };
+请在下方选择购买方式 ⬇️
+`;
 }
-
