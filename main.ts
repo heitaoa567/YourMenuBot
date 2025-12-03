@@ -1,17 +1,29 @@
 // ==========================================================
 //                        main.ts
-//            YourMenuBot — Telegram Bot入口文件
 // ==========================================================
 
 import { router } from "./core/router.ts";
+
+// ====== 自动加载所有插件 ======
+import "./plugins/admin/main.ts";
+import "./plugins/subbot/main.ts";
+import "./plugins/wallet/main.ts";
+import "./plugins/vip/main.ts";
+import "./plugins/ads/main.ts";
+import "./plugins/supply/main.ts";
+import "./plugins/referral/main.ts";
+import "./plugins/ai/main.ts";
+import "./plugins/broadcast/main.ts";
+
+// ====== 加载语言系统 ======
 import { loadLanguage } from "./plugins/lang/index.ts";
 
-// 环境变量
+// ====== 读取环境变量 ======
 const BOT_TOKEN = Deno.env.get("BOT_TOKEN")!;
 const TG_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
 // ==========================================================
-//                 统一请求函数（安全封装）
+//                 安全 JSON
 // ==========================================================
 async function safeJson(req: Request) {
   try {
@@ -22,31 +34,19 @@ async function safeJson(req: Request) {
 }
 
 // ==========================================================
-//               Telegram 回复（基础封装）
-// ==========================================================
-export async function tgSend(chat_id: number, text: string, reply_markup: any = null) {
-  const payload: any = { chat_id, text, parse_mode: "HTML" };
-  if (reply_markup) payload.reply_markup = reply_markup;
-
-  await fetch(`${TG_API}/sendMessage`, {
-    method: "POST",
-    body: JSON.stringify(payload),
-    headers: { "Content-Type": "application/json" }
-  }).catch(() => {});
-}
-
-// ==========================================================
-//                    Webhook 主入口
+//                         Webhook
 // ==========================================================
 Deno.serve(async (req) => {
   const update = await safeJson(req);
   if (!update) return new Response("OK");
 
-  // 自动加载多语言（如果用户没设置语言）
+  // 初始化语言
   await loadLanguage(update);
 
-  // 调用核心路由
+  // 处理 Telegram 更新
   await router(update);
 
   return new Response("OK");
 });
+
+console.log("🚀 YourMenuBot running on Deno Deploy!");
