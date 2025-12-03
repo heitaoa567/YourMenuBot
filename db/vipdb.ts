@@ -1,94 +1,99 @@
-// ======================================
-//               vipdb.ts
-//     VIP 充值 / 套餐 / 激活 / 续费
-// ======================================
+// ======================================================================
+//                             db/vipdb.ts
+//               VIP 订阅数据库（记录所有充值与套餐）
+// ======================================================================
 
-import { getUser, saveUser, updateUser } from "./userdb.ts";
+import { VipRecord } from "../types.ts";
 
-const kv = await Deno.openKv();
+const FILE = "./db/data/vip.json";
 
-// ================================
-// VIP 套餐定义（单位：毫秒）
-// ================================
-export const VIP_PLANS = {
-  week:    { days: 7,   price: 5 },
-  month:   { days: 30,  price: 15 },
-  season:  { days: 90,  price: 38 },
-  year:    { days: 365, price: 158 },
-  lifetime:{ days: 99999, price: 388 }, // 约等于无期限
-};
+let cache: VipRecord[] = [];
 
-// ================================
-// 获取套餐时长
-// ================================
-export function getVipDuration(plan: keyof typeof VIP_PLANS): number {
-  return VIP_PLANS[plan].days * 24 * 60 * 60 * 1000;
-}
 
-// ================================
-// 激活或续费 VIP
-// ================================
-export async function activateVIP(chatId: number, plan: keyof typeof VIP_PLANS) {
-  const user = await getUser(chatId);
-
-  const now = Date.now();
-  const duration = getVipDuration(plan);
-
-  let newExpires = now;
-
-  // 如果当前已经VIP → 续费
-  if (user.vip_until > now) {
-    newExpires = user.vip_until + duration;
-  } else {
-    newExpires = now + duration;
+// ======================================================================
+//                            load DB
+// ======================================================================
+async function loadDB() {
+  try {
+    const text = await Deno.readTextFile(FILE);
+    cache = JSON.parse(text);
+  } catch {
+    console.warn("⚠️ vip.json 不存在，正在创建...");
+    cache = [];
+    await saveDB();
   }
-
-  user.is_vip = true;
-  user.vip_until = newExpires;
-
-  await saveUser(chatId, user);
-
-  return newExpires;
 }
 
-// ================================
-// 检查是否 VIP
-// ================================
-export async function isVIP(chatId: number): Promise<boolean> {
-  const user = await getUser(chatId);
+
+// ======================================================================
+//                            save DB
+// ======================================================================
+async function saveDB() {
+  await Deno.writeTextFile(FILE, JSON.stringify(cache, null, 2));
+}
+
+
+// ======================================================================
+//                   新增一条 VIP 记录（充值成功）
+// ======================================================================
+export async function addVipRecord(rec: VipRecord) {
+  if (cache.length === 0) await loadDB();
+  cache.push(rec);
+  await saveDB();
+}
+
+
+// ======================================================================
+//                     获取用户所有 VIP 订阅记录
+// ======================================================================
+export async function getVipRecords(uid: number): Promise<VipRecord[]> {
+  if (cache.length === 0) await loadDB();
+  return cache.filter((x) => x.user_id === uid);
+}
+
+
+// ======================================================================
+//                获取用户最近的一次 VIP 记录（常用）
+// ======================================================================
+export async function getLatestVip(uid: number): Promise<VipRecord | null> {
+  const list = await getVipRecords(uid);
+  if (list.length === 0) return null;
+
+  return list.sort((a, b) => b.start - a.start)[0];
+}
+
+
+// ======================================================================
+//                VIP 延期（重新计算 vip_until）
+// ======================================================================
+export async function extendVip(
+  uid: number,
+  days: number,
+  txid: string | null = null
+) {
   const now = Date.now();
-  return user.vip_until > now;
+  const end = now + days * 86400000;
+
+  // 新纪录
+  const rec: VipRecord = {
+    user_id: uid,
+    plan: `${days}_days`,
+    amount: 0,
+    start: now,
+    end,
+    txid: txid || undefined,
+  };
+
+  await addVipRecord(rec);
+  return end;
 }
 
-// ================================
-// 获取 VIP 到期日期
-// ================================
-export async function getVipExpire(chatId: number): Promise<number> {
-  const user = await getUser(chatId);
-  return user.vip_until || 0;
-}
 
-// ================================
-// 取消 VIP（手动操作）
-// ================================
-export async function removeVIP(chatId: number) {
-  await updateUser(chatId, {
-    is_vip: false,
-    vip_until: 0,
-  });
-}
-
-// ================================
-// 列出所有 VIP 用户
-// ================================
-export async function listVIPUsers() {
-  const vipList = [];
-  for await (const entry of kv.list({ prefix: ["user"] })) {
-    const u = entry.value;
-    if (u && u.vip_until > Date.now()) {
-      vipList.push(u);
-    }
-  }
-  return vipList;
+// ======================================================================
+//                  管理员：获取所有 VIP 订单
+// ======================================================================
+export async function getAllVipOrders(): Promise<VipRecord[]> {
+  if (cache.length === 0) await loadDB();
+  return cache;
 }
 
