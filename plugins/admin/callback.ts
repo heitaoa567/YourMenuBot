@@ -231,4 +231,66 @@ export function setupAdminCallbacks(router: Router) {
     await sendMsg(ctx, "💰 输入最低充值金额：");
   });
 
-  router.callback("admin_wall_
+  router.callback("admin_wallet_edit_minwd", async (ctx) => {
+    Users.set(ctx.from.id, { step: "admin_wallet_minwd" });
+    await sendMsg(ctx, "💸 输入最低提现金额：");
+  });
+
+  router.callback("admin_wallet_fee_dep", async (ctx) => {
+    Users.set(ctx.from.id, { step: "admin_wallet_fee_dep" });
+    await sendMsg(ctx, "💰 输入充值手续费（%）：");
+  });
+
+  router.callback("admin_wallet_fee_wd", async (ctx) => {
+    Users.set(ctx.from.id, { step: "admin_wallet_fee_wd" });
+    await sendMsg(ctx, "💸 输入提现手续费（%）：");
+  });
+
+
+  // ======================================================
+  // 9️⃣ 供需系统 admin_supply
+  // ======================================================
+  router.callback("admin_supply", async (ctx) => {
+    await showAdminSupplyMenu(ctx);
+  });
+
+  router.callback("admin_supply_edit_max", async (ctx) => {
+    Users.set(ctx.from.id, { step: "admin_supply_edit_max" });
+    await sendMsg(ctx, "📦 输入最大发布次数（每日）：");
+  });
+
+  router.callback("admin_supply_toggle_check", async (ctx) => {
+    const s = SubBotDB.getSupplySettings();
+    SubBotDB.setSupplySettings({ auto_check: !s.auto_check });
+    await showAdminSupplyMenu(ctx);
+  });
+
+
+  // ======================================================
+  // 🔟 全局广播 admin_broadcast
+  // ======================================================
+  router.callback("admin_broadcast", async (ctx) => {
+    await showAdminBroadcastMenu(ctx);
+  });
+
+  router.callback("admin_broadcast_text", async (ctx) => {
+    Users.set(ctx.from.id, { step: "admin_broadcast_text" });
+    await sendMsg(ctx, "📝 输入广播文本内容：");
+  });
+
+  router.callback("admin_broadcast_photo", async (ctx) => {
+    Users.set(ctx.from.id, { step: "admin_broadcast_photo" });
+    await sendMsg(ctx, "🖼 请发送要广播的图片：");
+  });
+
+  router.callback("admin_broadcast_video", async (ctx) => {
+    Users.set(ctx.from.id, { step: "admin_broadcast_video" });
+    await sendMsg(ctx, "🎬 请发送视频文件：");
+  });
+
+  router.callback("admin_broadcast_button", async (ctx) => {
+    Users.set(ctx.from.id, { step: "admin_broadcast_button" });
+    await sendMsg(ctx, "🔗 请发送 广播文本+按钮JSON：");
+  });
+
+}
