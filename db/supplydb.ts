@@ -1,146 +1,150 @@
-// ======================================
-//               supplydb.ts
-//     供需市场数据库（发布 / 浏览 / 置顶）
-// ======================================
+// ======================================================================
+//                           db/supplydb.ts
+//                    供需系统（发布 / 置顶 / 浏览量）
+// ======================================================================
 
-export interface SupplyPost {
-  id: string;             // 帖子 ID
-  chat_id: number;        // 发布者
-  content: string;        // 内容
-  created_at: number;     // 发布时间
+import { SupplyItem } from "../types.ts";
 
-  // 浏览统计
-  views: number;          
+const FILE = "./db/data/supply.json";
 
-  // 置顶
-  is_top: boolean;        
-  top_until: number;      
+// 内存缓存
+let supply: Record<number, SupplyItem> = {};
 
-  // 推广分佣
-  promote_id?: number;     // 推广人（用于 40% 返利）
+
+// ======================================================================
+//                      加载数据库
+// ======================================================================
+async function loadDB() {
+  try {
+    const text = await Deno.readTextFile(FILE);
+    supply = JSON.parse(text);
+  } catch {
+    console.warn("⚠️ supply.json 不存在，正在创建...");
+    supply = {};
+    await saveDB();
+  }
 }
 
-const kv = await Deno.openKv();
 
-// =========================
-// 工具：生成供需帖 ID
-// =========================
-function genPostId() {
-  return `supply_${Date.now()}_${Math.floor(Math.random() * 99999)}`;
+// ======================================================================
+//                      保存数据库
+// ======================================================================
+async function saveDB() {
+  await Deno.writeTextFile(FILE, JSON.stringify(supply, null, 2));
 }
 
-// =========================
-// 创建供需帖子
-// =========================
-export async function createSupply(chatId: number, content: string, promote_id?: number) {
-  const post: SupplyPost = {
-    id: genPostId(),
-    chat_id: chatId,
-    content,
+
+// ======================================================================
+//                    发布供需（新增）
+// ======================================================================
+export async function addSupply(item: SupplyItem) {
+  if (Object.keys(supply).length === 0) await loadDB();
+
+  const id = Date.now();
+  supply[id] = {
+    id,
+    uid: item.uid,
+    type: item.type,       // supply / demand
+    title: item.title,
+    content: item.content,
     created_at: Date.now(),
-
     views: 0,
-
-    is_top: false,
+    top: false,            // VIP 置顶
     top_until: 0,
-
-    promote_id,
   };
 
-  await kv.set(["supply", post.id], post);
-  return post;
+  await saveDB();
+  return id;
 }
 
-// =========================
-// 获取单个帖子
-// =========================
-export async function getSupply(id: string): Promise<SupplyPost | null> {
-  const res = await kv.get<SupplyPost>(["supply", id]);
-  return res.value || null;
+
+// ======================================================================
+//                    VIP 置顶（天数可扩展）
+// ======================================================================
+export async function setTop(id: number, days: number) {
+  if (Object.keys(supply).length === 0) await loadDB();
+
+  if (!supply[id]) return false;
+
+  const now = Date.now();
+  const ms = days * 24 * 60 * 60 * 1000;
+
+  supply[id].top = true;
+  supply[id].top_until = now + ms;
+
+  await saveDB();
+  return true;
 }
 
-// =========================
-// 增加浏览量
-// =========================
-export async function addView(id: string) {
-  const post = await getSupply(id);
-  if (!post) return;
 
-  post.views++;
-  await kv.set(["supply", id], post);
+// ======================================================================
+//                    增加浏览次数（排序依据）
+// ======================================================================
+export async function addView(id: number) {
+  if (Object.keys(supply).length === 0) await loadDB();
+
+  if (!supply[id]) return false;
+
+  supply[id].views += 1;
+  await saveDB();
+  return true;
 }
 
-// =========================
-// 查询全部帖子（排序自动处理）
-// =========================
-export async function listSupply(): Promise<SupplyPost[]> {
-  const list: SupplyPost[] = [];
 
-  for await (const entry of kv.list<SupplyPost>({ prefix: ["supply"] })) {
-    if (entry.value) list.push(entry.value);
-  }
+// ======================================================================
+//                    删除供需（用户或管理员）
+// ======================================================================
+export async function deleteSupply(id: number, uid?: number) {
+  if (Object.keys(supply).length === 0) await loadDB();
+
+  if (!supply[id]) return false;
+
+  // 用户只能删除自己的
+  if (uid && supply[id].uid !== uid) return false;
+
+  delete supply[id];
+  await saveDB();
+  return true;
+}
+
+
+// ======================================================================
+//         获取供需列表（根据置顶 + 时间 + 浏览量排序）
+// ======================================================================
+export async function getSupplyList() {
+  if (Object.keys(supply).length === 0) await loadDB();
 
   const now = Date.now();
 
-  // 排序逻辑：置顶（未过期） > 时间
-  return list.sort((a, b) => {
-    const topA = a.is_top && a.top_until > now ? 1 : 0;
-    const topB = b.is_top && b.top_until > now ? 1 : 0;
+  const list = Object.values(supply).filter(item => {
+    // 自动取消过期置顶
+    if (item.top && item.top_until < now) {
+      item.top = false;
+      item.top_until = 0;
+    }
+    return true;
+  });
 
-    if (topA !== topB) return topB - topA;
+  // 排序：置顶 > 浏览量 > 时间
+  list.sort((a, b) => {
+    if (a.top && !b.top) return -1;
+    if (!a.top && b.top) return 1;
+
+    if (b.views !== a.views) return b.views - a.views;
 
     return b.created_at - a.created_at;
   });
+
+  return list;
 }
 
-// =========================
-// 删除帖子
-// =========================
-export async function deleteSupply(id: string) {
-  await kv.delete(["supply", id]);
-}
 
-// =========================
-// 置顶帖子
-// =========================
-export async function topSupply(id: string, days = 1) {
-  const post = await getSupply(id);
-  if (!post) return;
+// ======================================================================
+//            按用户获取供需（个人中心 / 用户管理）
+// ======================================================================
+export async function getUserSupply(uid: number) {
+  if (Object.keys(supply).length === 0) await loadDB();
 
-  const duration = days * 24 * 60 * 60 * 1000;
-
-  post.is_top = true;
-  post.top_until = Date.now() + duration;
-
-  await kv.set(["supply", id], post);
-}
-
-// =========================
-// 取消置顶
-// =========================
-export async function cancelTop(id: string) {
-  const post = await getSupply(id);
-  if (!post) return;
-
-  post.is_top = false;
-  post.top_until = 0;
-
-  await kv.set(["supply", id], post);
-}
-
-// =========================
-// 清理过期置顶（后台用）
-// =========================
-export async function cleanExpiredTops() {
-  const now = Date.now();
-
-  for await (const entry of kv.list<SupplyPost>({ prefix: ["supply"] })) {
-    const p = entry.value;
-    if (p && p.is_top && p.top_until < now) {
-      p.is_top = false;
-      p.top_until = 0;
-      await kv.set(["supply", p.id], p);
-    }
-  }
+  return Object.values(supply).filter(item => item.uid === uid);
 }
 
