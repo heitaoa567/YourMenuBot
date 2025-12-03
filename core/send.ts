@@ -136,4 +136,3 @@ export async function sendSilentText(
   return await sendText(chatId, text, keyboard, true);
 }
 
-
