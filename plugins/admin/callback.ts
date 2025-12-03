@@ -318,4 +318,34 @@ router.callback("admin_wallet_ledger", async (ctx) => {
   await ctx.reply("📑 查询账单流水…（对接 wallet/ledger.ts）");
 });
 
+
+  // ======================================================
+// 🧾 钱包后台 - 数据查询子菜单
+// ======================================================
+
+// 余额总览（对接 plugins/wallet/balance.ts）
+router.callback("admin_wallet_balance", async (ctx) => {
+  await ctx.reply("📊 正在查询用户余额...\n（请在这里对接 wallet/balance.ts）");
+});
+
+// 充值记录（对接 plugins/wallet/deposit.ts）
+router.callback("admin_wallet_deposit", async (ctx) => {
+  await ctx.reply("📥 正在查询充值记录...\n（请在这里对接 wallet/deposit.ts）");
+});
+
+// 提现记录（对接 plugins/wallet/withdraw.ts）
+router.callback("admin_wallet_withdraw", async (ctx) => {
+  await ctx.reply("📤 正在查询提现记录...\n（请在这里对接 wallet/withdraw.ts）");
+});
+
+// 账单流水（对接 plugins/wallet/ledger.ts）
+router.callback("admin_wallet_ledger", async (ctx) => {
+  await ctx.reply("📑 正在查询钱包账单流水...\n（请在这里对接 wallet/ledger.ts）");
+});
+
+// 返回后台主菜单
+router.callback("admin_back", async (ctx) => {
+  await showAdminMainMenu(ctx);
+});
+
 }
