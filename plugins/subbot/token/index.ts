@@ -1,67 +1,85 @@
 // =======================================
 // plugins/subbot/token/index.ts
-// 子机器人系统：Token 绑定主入口
+// 子机器人 Token 绑定主控制器（严格按你的结构）
 // =======================================
 
 import { Router } from "../../../core/router";
 import { sendMsg } from "../../../core/send";
 import { Users } from "../../../userdb";
-import { SubBotDB } from "../../../subbotdb";
-import { checkBotToken } from "./token_check";
+import { showSubBotTokenMenu } from "./menu";
+import { validateToken } from "./validate";
+import { saveSubBot } from "./save";
 
-export function setupSubBotTokenPlugin(router: Router) {
-
-  // 用户发送 /bindbot 进入绑定流程
-  router.cmd("/bindbot", async (ctx) => {
-    const uid = ctx.from.id;
-
-    // 设置步骤
-    Users.set(uid, { step: "await_bot_token" });
-
-    await sendMsg(ctx, "🔗 *请发送你要绑定的子机器人 Token*\n\n- 必须是 @BotFather 创建的 Token\n- 格式：`123456789:XXXXXXX`\n- 发送后系统将自动验证", { parse_mode: "Markdown" });
+export function setupSubBotTokenModule(router: Router) {
+  
+  // ================================
+  // ① 回调：打开子机器人绑定菜单
+  // ================================
+  router.callback("subbot_token", async (ctx) => {
+    await showSubBotTokenMenu(ctx);
   });
 
-  // 用户处于输入 Token 状态
+  // ================================
+  // ② 回调：开始绑定新的子机器人
+  // ================================
+  router.callback("subbot_token_bind", async (ctx) => {
+    const uid = ctx.from.id;
+
+    Users.set(uid, { step: "await_subbot_token" });
+
+    await sendMsg(ctx, "🔐 *请输入你的子机器人 Token*\n\n格式：`123456789:XXXXX`\n系统会自动验证有效性。", {
+      parse_mode: "Markdown"
+    });
+  });
+
+  // ================================
+  // ③ 用户输入 Token
+  // ================================
   router.text(async (ctx) => {
     const uid = ctx.from.id;
     const text = ctx.message.text.trim();
 
     const user = Users.get(uid);
-    if (!user || user.step !== "await_bot_token") return; // 非此状态忽略
+    if (!user || user.step !== "await_subbot_token") return;
 
-    // 粗略校验 Token 格式
+    // 粗校验
     if (!/^\d+:[A-Za-z0-9_-]+$/.test(text)) {
-      return sendMsg(ctx, "❌ *Token 格式不正确*\n请重新输入正确的子机器人 Token", {
-        parse_mode: "Markdown"
-      });
+      return sendMsg(ctx, "❌ Token 格式不正确，请重新输入。");
     }
 
-    await sendMsg(ctx, "⏳ 正在验证 Token，请稍等…");
+    await sendMsg(ctx, "⏳ 正在验证 Token…");
 
-    const info = await checkBotToken(text);
+    const info = await validateToken(text);
 
-    // Token 无效
     if (!info.ok) {
-      return sendMsg(ctx, "❌ *Token 无效*\n请确认你输入的是由 @BotFather 生成的真实 Token", {
+      return sendMsg(ctx, "❌ *Token 无效*\n请确认这是 @BotFather 创建的真实机器人 Token。", {
         parse_mode: "Markdown"
       });
     }
 
-    // 写入数据库
-    SubBotDB.addBot(uid, {
+    // 保存到数据库
+    saveSubBot({
+      owner_id: uid,
       token: text,
-      bot_id: info.bot_id,
-      username: info.username,
-      name: info.name,
-      created_at: Date.now(),
+      bot_id: info.bot_id!,
+      username: info.username!,
+      name: info.name!
     });
 
-    // 清空步骤
+    // 清除步骤
     Users.set(uid, { step: null });
 
-    return sendMsg(ctx, `✅ *绑定成功！*\n\n你的子机器人：\n- 🤖 名称：*${info.name}*\n- 🟦 用户名：@${info.username}\n\n你现在可以使用子机器人菜单继续配置。`, {
-      parse_mode: "Markdown"
-    });
+    // 返回成功信息
+    await sendMsg(ctx,
+      `✅ *绑定成功！*\n\n你已成功绑定：@${info.username}（${info.name}）`,
+      { parse_mode: "Markdown" }
+    );
+  });
+
+  // ================================
+  // ④ 查看已绑定的子机器人
+  // ================================
+  router.callback("subbot_token_list", async (ctx) => {
+    await showSubBotTokenMenu(ctx); // 这里复用 menu.ts 的列表显示
   });
 }
-
