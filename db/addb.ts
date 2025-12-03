@@ -1,138 +1,120 @@
-// ======================================
-//                 addb.ts
-//     广告系统数据库（支持多广告位）
-// ======================================
+// ======================================================================
+//                           db/addb.ts
+//         广告系统：支持多广告位 / 开关 / VIP 去广告
+// ======================================================================
 
-export interface AdItem {
-  id: string;           // 广告ID
-  slot: string;         // 广告位（如: home, menu, subbot etc）
-  title: string;        // 标题
-  content: string;      // 文字内容
-  image?: string;       // 图片 URL（可选）
-  url?: string;         // 跳转链接
-  enabled: boolean;     // 是否启用
+import { AdsConfig } from "../types.ts";
 
-  views: number;        // 展示次数
-  clicks: number;       // 点击次数
+const FILE = "./db/data/ads.json";
 
-  created_at: number;
+// 全局广告缓存
+let ads: AdsConfig = {
+  enabled: true,          // 全局广告开关
+  supply_ads_enabled: true, // 供需板块广告开关
+  banner_top: "",         // 顶部横幅
+  banner_bottom: "",      // 底部横幅
+  popup: "",              // 弹窗广告
+  supply_banner: "",      // 供需广告
+};
+
+
+// ======================================================================
+//                          读取广告文件
+// ======================================================================
+async function loadDB() {
+  try {
+    const txt = await Deno.readTextFile(FILE);
+    ads = JSON.parse(txt);
+  } catch {
+    console.warn("⚠️ ads.json 不存在，正在创建...");
+    await saveDB();
+  }
 }
 
-const kv = await Deno.openKv();
 
-// ================================
-// 工具：生成广告ID
-// ================================
-function genAdId() {
-  return `ad_${Date.now()}_${Math.floor(Math.random() * 99999)}`;
+// ======================================================================
+//                          保存广告文件
+// ======================================================================
+async function saveDB() {
+  await Deno.writeTextFile(FILE, JSON.stringify(ads, null, 2));
 }
 
-// ================================
-// 创建广告
-// ================================
-export async function createAd(
-  slot: string,
-  title: string,
-  content: string,
-  image?: string,
-  url?: string
-): Promise<AdItem> {
-  const ad: AdItem = {
-    id: genAdId(),
-    slot,
-    title,
-    content,
-    image,
-    url,
-    enabled: true,
 
-    views: 0,
-    clicks: 0,
+// ======================================================================
+//                       获取广告配置（前台调用）
+// ======================================================================
+export async function getAds() {
+  await loadDB();
+  return ads;
+}
 
-    created_at: Date.now(),
+
+// ======================================================================
+//                    设置某个广告位（后台可用）
+// ======================================================================
+export async function setAd(key: keyof AdsConfig, value: string | boolean) {
+  await loadDB();
+
+  // 防止恶意 key
+  if (!(key in ads)) return false;
+
+  // @ts-ignore
+  ads[key] = value;
+
+  await saveDB();
+  return true;
+}
+
+
+// ======================================================================
+//                    批量更新广告位（后台使用）
+// ======================================================================
+export async function updateAds(newAds: Partial<AdsConfig>) {
+  await loadDB();
+
+  ads = {
+    ...ads,
+    ...newAds,
   };
 
-  await kv.set(["ad", ad.id], ad);
-  return ad;
+  await saveDB();
+  return true;
 }
 
-// ================================
-// 获取广告
-// ================================
-export async function getAd(id: string): Promise<AdItem | null> {
-  const res = await kv.get<AdItem>(["ad", id]);
-  return res.value || null;
+
+// ======================================================================
+//                     清空某个广告位
+// ======================================================================
+export async function clearAd(key: keyof AdsConfig) {
+  await loadDB();
+
+  if (!(key in ads)) return false;
+
+  // @ts-ignore
+  ads[key] = typeof ads[key] === "string" ? "" : false;
+
+  await saveDB();
+  return true;
 }
 
-// ================================
-// 增加展示次数
-// ================================
-export async function addAdView(id: string) {
-  const ad = await getAd(id);
-  if (!ad) return;
 
-  ad.views++;
-  await kv.set(["ad", id], ad);
-}
+// ======================================================================
+//        VIP 去广告：用户进入供需时调用，判断是否隐藏广告
+// ======================================================================
+export async function getAdsForUser(isVIP: boolean) {
+  await loadDB();
 
-// ================================
-// 增加点击次数
-// ================================
-export async function addAdClick(id: string) {
-  const ad = await getAd(id);
-  if (!ad) return;
-
-  ad.clicks++;
-  await kv.set(["ad", id], ad);
-}
-
-// ================================
-// 更新广告（部分更新）
-// ================================
-export async function updateAd(id: string, patch: Partial<AdItem>) {
-  const ad = await getAd(id);
-  if (!ad) return;
-
-  const updated = { ...ad, ...patch };
-  await kv.set(["ad", id], updated);
-}
-
-// ================================
-// 删除广告
-// ================================
-export async function deleteAd(id: string) {
-  await kv.delete(["ad", id]);
-}
-
-// ================================
-// 列出某个广告位的广告
-// ================================
-export async function listAds(slot?: string): Promise<AdItem[]> {
-  const list: AdItem[] = [];
-
-  for await (const entry of kv.list<AdItem>({ prefix: ["ad"] })) {
-    const ad = entry.value;
-    if (!ad) continue;
-
-    if (slot && ad.slot !== slot) continue;
-
-    list.push(ad);
+  if (isVIP) {
+    return {
+      ...ads,
+      enabled: false,
+      supply_ads_enabled: false,
+      banner_top: "",
+      banner_bottom: "",
+      popup: "",
+      supply_banner: ""
+    };
   }
 
-  // 排序：启用的 > 创建时间
-  return list.sort((a, b) => {
-    if (a.enabled !== b.enabled) return a.enabled ? -1 : 1;
-    return b.created_at - a.created_at;
-  });
+  return ads;
 }
-
-// ================================
-// VIP 自动隐藏广告判断逻辑（供主程序使用）
-// ================================
-export async function getAdsForUser(slot: string, isVIP: boolean) {
-  if (isVIP) return []; // VIP 不显示广告
-
-  const ads = await listAds(slot);
-  return ads.filter(a => a.enabled);
-}
-
