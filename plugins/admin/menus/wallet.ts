@@ -1,47 +1,38 @@
-// ==========================================
+// =======================================================
 // plugins/admin/menus/wallet.ts
-// 钱包系统后台菜单
-// ==========================================
+// 后台 - 钱包管理菜单（对接钱包模块）
+// =======================================================
 
 import { sendMsg } from "../../../core/send";
-import { SubBotDB } from "../../../subbotdb";
 
-export async function showAdminWalletMenu(ctx: any) {
+export async function showWalletMenu(ctx: any) {
+    const text = 
+`💰 *钱包系统后台*
 
-  const wallet = SubBotDB.getWalletSettings();
+请选择你要管理的内容：`;
 
-  const text = `💰 *钱包系统后台*
+    const keyboard = {
+        inline_keyboard: [
+            [
+                { text: "💵 用户余额总览", callback_data: "admin_wallet_balance" }
+            ],
+            [
+                { text: "📥 充值记录", callback_data: "admin_wallet_deposit" }
+            ],
+            [
+                { text: "📤 提现记录", callback_data: "admin_wallet_withdraw" }
+            ],
+            [
+                { text: "📑 钱包账单流水", callback_data: "admin_wallet_ledger" }
+            ],
+            [
+                { text: "⬅️ 返回后台主菜单", callback_data: "admin_back" }
+            ]
+        ]
+    };
 
-当前设置：
-• 最低充值金额：${wallet.min_deposit} USDT
-• 最低提现金额：${wallet.min_withdraw} USDT
-• 充值手续费：${wallet.deposit_fee}%
-• 提现手续费：${wallet.withdraw_fee}%
-
-请选择你要调整的功能👇`;
-
-  const keyboard = {
-    inline_keyboard: [
-      [
-        { text: "✏️ 修改最低充值", callback_data: "admin_wallet_edit_mindep" }
-      ],
-      [
-        { text: "✏️ 修改最低提现", callback_data: "admin_wallet_edit_minwd" }
-      ],
-      [
-        { text: "💰 修改充值手续费", callback_data: "admin_wallet_fee_dep" }
-      ],
-      [
-        { text: "💸 修改提现手续费", callback_data: "admin_wallet_fee_wd" }
-      ],
-      [
-        { text: "🔙 返回后台", callback_data: "admin_main" }
-      ]
-    ]
-  };
-
-  await sendMsg(ctx, text, {
-    parse_mode: "Markdown",
-    reply_markup: keyboard
-  });
+    await sendMsg(ctx, text, {
+        parse_mode: "Markdown",
+        reply_markup: keyboard
+    });
 }
