@@ -1,228 +1,192 @@
-// ======================================
-//               walletdb.ts
-//   USDT 钱包数据库（余额 / 充值 / 提现 / 账本）
-// ======================================
+// ======================================================================
+//                           db/walletdb.ts
+//                     用户钱包系统（USDT）
+// ======================================================================
 
-import { getUser, updateUser } from "./userdb.ts";
+import { WalletData, WalletRecord } from "../types.ts";
 
-export interface DepositRecord {
-  id: string;
-  chat_id: number;
-  txid: string;
-  amount: number;
-  confirmed: boolean;
-  created_at: number;
-}
+const FILE = "./db/data/wallet.json";
 
-export interface WithdrawRecord {
-  id: string;
-  chat_id: number;
-  address: string;
-  amount: number;
-  fee: number;
-  status: "pending" | "approved" | "rejected";
-  created_at: number;
-}
+// 内存缓存
+let cache: Record<number, WalletData> = {};
 
-export interface LedgerRecord {
-  id: string;
-  chat_id: number;
-  type: "deposit" | "withdraw" | "vip" | "reward";
-  amount: number;
-  desc?: string;
-  created_at: number;
-}
 
-const kv = await Deno.openKv();
-
-// ======================================
-// 工具：生成订单 ID
-// ======================================
-function genId(prefix: string) {
-  return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 99999)}`;
-}
-
-// ======================================
-// 基础余额功能
-// ======================================
-export async function getBalance(chatId: number): Promise<number> {
-  const user = await getUser(chatId);
-  return user.wallet_balance || 0;
-}
-
-export async function setBalance(chatId: number, amount: number) {
-  await updateUser(chatId, { wallet_balance: amount });
-}
-
-export async function addBalance(chatId: number, amount: number) {
-  const bal = await getBalance(chatId);
-  await updateUser(chatId, { wallet_balance: bal + amount });
-}
-
-export async function subBalance(chatId: number, amount: number) {
-  const bal = await getBalance(chatId);
-  await updateUser(chatId, { wallet_balance: Math.max(0, bal - amount) });
-}
-
-// ======================================
-// 充值记录（Deposit）
-// ======================================
-export async function createDeposit(
-  chatId: number,
-  txid: string,
-  amount: number
-): Promise<DepositRecord> {
-  const id = genId("deposit");
-  const record: DepositRecord = {
-    id,
-    chat_id: chatId,
-    txid,
-    amount,
-    confirmed: false,
-    created_at: Date.now(),
-  };
-
-  await kv.set(["deposit", id], record);
-  return record;
-}
-
-// 防止重复提交 TXID
-export async function findDepositByTx(txid: string) {
-  for await (const entry of kv.list<DepositRecord>({ prefix: ["deposit"] })) {
-    if (entry.value && entry.value.txid === txid) return entry.value;
+// ======================================================================
+//                      加载数据库
+// ======================================================================
+async function loadDB() {
+  try {
+    const text = await Deno.readTextFile(FILE);
+    cache = JSON.parse(text);
+  } catch {
+    console.warn("⚠️ wallet.json 不存在，正在创建...");
+    cache = {};
+    await saveDB();
   }
-  return null;
 }
 
-// 充值确认成功
-export async function confirmDeposit(id: string) {
-  const res = await kv.get<DepositRecord>(["deposit", id]);
-  if (!res.value) return;
 
-  const record = res.value;
-  record.confirmed = true;
+// ======================================================================
+//                      保存数据库
+// ======================================================================
+async function saveDB() {
+  await Deno.writeTextFile(FILE, JSON.stringify(cache, null, 2));
+}
 
-  await kv.set(["deposit", id], record);
 
-  // 充值到账
-  await addBalance(record.chat_id, record.amount);
+// ======================================================================
+//                获取钱包（无则自动创建）
+// ======================================================================
+export async function getWallet(uid: number): Promise<WalletData> {
+  if (Object.keys(cache).length === 0) await loadDB();
 
-  // 写入账本
-  await addLedger(record.chat_id, "deposit", record.amount, "USDT充值到账");
+  if (!cache[uid]) {
+    cache[uid] = {
+      uid,
+      balance: 0,
+      records: [],       // 交易记录
+      pending: [],       // 待审核提现
+      created_at: Date.now(),
+    };
+    await saveDB();
+  }
 
+  return cache[uid];
+}
+
+
+// ======================================================================
+//                  增加余额（充值 / 返点等）
+// ======================================================================
+export async function addBalance(
+  uid: number,
+  amount: number,
+  note = "Recharge"
+) {
+  const w = await getWallet(uid);
+
+  w.balance += amount;
+  w.records.push({
+    amount,
+    note,
+    type: "income",
+    time: Date.now(),
+  });
+
+  await saveDB();
+}
+
+
+// ======================================================================
+//                  扣除余额（购买 VIP / 提现）
+// ======================================================================
+export async function reduceBalance(
+  uid: number,
+  amount: number,
+  note = "Payment"
+): Promise<boolean> {
+  const w = await getWallet(uid);
+
+  if (w.balance < amount) return false;
+
+  w.balance -= amount;
+  w.records.push({
+    amount: -amount,
+    note,
+    type: "expense",
+    time: Date.now(),
+  });
+
+  await saveDB();
   return true;
 }
 
-// 查询该用户所有充值
-export async function listDeposits(chatId: number) {
-  const list: DepositRecord[] = [];
-  for await (const entry of kv.list<DepositRecord>({ prefix: ["deposit"] })) {
-    if (entry.value && entry.value.chat_id === chatId) list.push(entry.value);
-  }
-  return list;
-}
 
-// ======================================
-// 提现（Withdraw）
-// ======================================
-export async function createWithdraw(
-  chatId: number,
-  address: string,
+// ======================================================================
+//                    提现申请（进入待审核）
+// ======================================================================
+export async function addWithdrawRequest(
+  uid: number,
   amount: number,
-  fee = 1
-): Promise<WithdrawRecord> {
-  const id = genId("withdraw");
+  address: string
+): Promise<boolean> {
+  const w = await getWallet(uid);
 
-  const record: WithdrawRecord = {
-    id,
-    chat_id: chatId,
+  if (w.balance < amount) return false;
+
+  w.pending.push({
+    uid,
+    amount,
     address,
-    amount,
-    fee,
     status: "pending",
-    created_at: Date.now(),
-  };
+    time: Date.now(),
+  });
 
-  await kv.set(["withdraw", id], record);
-
-  // 提现扣款（冻结）  
-  await subBalance(chatId, amount + fee);
-
-  // 账本
-  await addLedger(chatId, "withdraw", -(amount + fee), "提现申请提交");
-
-  return record;
+  // 不立即扣除余额，管理员审核后再扣
+  await saveDB();
+  return true;
 }
 
-// 审核提现
-export async function updateWithdrawStatus(id: string, status: "approved" | "rejected") {
-  const res = await kv.get<WithdrawRecord>(["withdraw", id]);
-  if (!res.value) return;
 
-  const record = res.value;
-  record.status = status;
-  await kv.set(["withdraw", id], record);
+// ======================================================================
+//              管理员：同意提现（正式扣费）
+// ======================================================================
+export async function approveWithdraw(uid: number, index: number) {
+  const w = await getWallet(uid);
+  const req = w.pending[index];
 
-  if (status === "rejected") {
-    // 退回余额
-    await addBalance(record.chat_id, record.amount + record.fee);
-    await addLedger(record.chat_id, "withdraw", record.amount + record.fee, "提现退回");
+  if (!req) return false;
+
+  if (w.balance < req.amount) return false;
+
+  // 扣费
+  w.balance -= req.amount;
+
+  w.records.push({
+    amount: -req.amount,
+    note: "USDT Withdraw",
+    type: "expense",
+    time: Date.now(),
+  });
+
+  req.status = "done";
+  await saveDB();
+  return true;
+}
+
+
+// ======================================================================
+//              管理员：拒绝提现（不扣费）
+// ======================================================================
+export async function rejectWithdraw(uid: number, index: number) {
+  const w = await getWallet(uid);
+  const req = w.pending[index];
+
+  if (!req) return false;
+
+  req.status = "rejected";
+  await saveDB();
+  return true;
+}
+
+
+// ======================================================================
+//              获取所有提现申请（给后台用）
+// ======================================================================
+export async function getAllWithdrawRequests() {
+  if (Object.keys(cache).length === 0) await loadDB();
+
+  const all: any[] = [];
+  for (const uid in cache) {
+    const w = cache[uid];
+    w.pending.forEach((p: any, idx: number) => {
+      all.push({
+        uid,
+        index: idx,
+        ...p,
+      });
+    });
   }
-
-  return record;
+  return all;
 }
 
-// 列出用户全部提现记录
-export async function listWithdraws(chatId: number) {
-  const list: WithdrawRecord[] = [];
-  for await (const entry of kv.list<WithdrawRecord>({ prefix: ["withdraw"] })) {
-    if (entry.value && entry.value.chat_id === chatId) list.push(entry.value);
-  }
-  return list;
-}
-
-// ======================================
-// 账本 Ledger（每一笔资金变动）
-// ======================================
-export async function addLedger(
-  chatId: number,
-  type: LedgerRecord["type"],
-  amount: number,
-  desc?: string
-) {
-  const id = genId("ledger");
-  const record: LedgerRecord = {
-    id,
-    chat_id: chatId,
-    type,
-    amount,
-    desc,
-    created_at: Date.now(),
-  };
-
-  await kv.set(["ledger", id], record);
-}
-
-export async function listLedger(chatId: number): Promise<LedgerRecord[]> {
-  const list: LedgerRecord[] = [];
-  for await (const entry of kv.list<LedgerRecord>({ prefix: ["ledger"] })) {
-    if (entry.value && entry.value.chat_id === chatId) list.push(entry.value);
-  }
-  return list;
-}
-
-// ======================================
-// 后台：列出所有余额不为0的用户
-// ======================================
-export async function listAllWallets() {
-  const result: { chat_id: number; balance: number }[] = [];
-
-  for await (const entry of kv.list({ prefix: ["user"] })) {
-    const user = entry.value;
-    if (user && user.wallet_balance && user.wallet_balance > 0) {
-      result.push({ chat_id: user.chat_id, balance: user.wallet_balance });
-    }
-  }
-
-  return result;
-}
