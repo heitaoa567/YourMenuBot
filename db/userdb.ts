@@ -7,9 +7,8 @@ import { UserData } from "../types.ts";
 
 const FILE = "./db/data/users.json";
 
-// 内存缓存（减少磁盘 I/O）
+// 内存缓存
 let cache: Record<number, UserData> = {};
-
 
 // ======================================================================
 //                        读取数据库文件
@@ -25,14 +24,12 @@ async function loadDB() {
   }
 }
 
-
 // ======================================================================
 //                        保存数据库文件
 // ======================================================================
 export async function saveDB() {
   await Deno.writeTextFile(FILE, JSON.stringify(cache, null, 2));
 }
-
 
 // ======================================================================
 //                        获取用户数据（自动初始化）
@@ -67,15 +64,13 @@ export async function getUser(uid: number): Promise<UserData> {
   return cache[uid];
 }
 
-
 // ======================================================================
-//                       保存单个用户数据
+//                       保存单个用户数据（修复版）
 // ======================================================================
-export async function saveUser(uid: number, data: UserData) {
-  cache[uid] = data;
+export async function saveUser(user: UserData) {
+  cache[user.id] = user;
   await saveDB();
 }
-
 
 // ======================================================================
 //                     获取所有用户（用于广播）
@@ -86,4 +81,3 @@ export async function getAllUsers(): Promise<number[]> {
   }
   return Object.keys(cache).map((x) => Number(x));
 }
-
