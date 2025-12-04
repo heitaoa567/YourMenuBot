@@ -22,15 +22,14 @@ import type { Update } from "../types.ts";
 // 用户数据库
 import { getUser, saveUser } from "../db/userdb.ts";
 
-// 公用发送函数
-import { sendText } from "./send.ts";
-
 // =====================================================
 //                    Router 主入口
 // =====================================================
 
-export async function router(update: Update) {
-  // 回调按钮 ======================================
+export async function router(update: Update, ctx: any) {
+  // ==================================================
+  // 回调按钮 =========================================
+  // ==================================================
   if (update.callback_query) {
     const cq = update.callback_query;
     const uid = cq.from.id;
@@ -39,11 +38,14 @@ export async function router(update: Update) {
     const user = await getUser(uid);
     const lang = user.lang || "en";
 
-    // 分发插件
+    // ========= 修复点 ①：给 callback.ts 传 ctx =========
+    if (data.startsWith("sub_"))
+      return await Subbot.handle(ctx, data);
+
+    // ========= 其他插件保持原有逻辑 =========
     if (data.startsWith("lang_")) return await Lang.handle(uid, data);
     if (data.startsWith("vip_")) return await VIP.handle(uid, data);
     if (data.startsWith("wallet_")) return await Wallet.handle(uid, data);
-    if (data.startsWith("sub_")) return await Subbot.handle(uid, data);
     if (data.startsWith("broadcast_")) return await Broadcast.handle(uid, data);
     if (data.startsWith("supply_")) return await Supply.handle(uid, data);
     if (data.startsWith("ads_")) return await Ads.handle(uid, data);
@@ -54,7 +56,9 @@ export async function router(update: Update) {
     return await handleMainCallback(uid, data, cq);
   }
 
-  // 普通消息 =======================================
+  // ==================================================
+  // 普通消息 =========================================
+  // ==================================================
   if (update.message) {
     const msg = update.message;
     const uid = msg.from.id;
@@ -66,7 +70,7 @@ export async function router(update: Update) {
     if (!user.created_at) {
       user.created_at = Date.now();
       user.lang = "en";
-      await saveUser(uid, user);
+      await saveUser(user); // 修复 saveUser 调用
     }
 
     // /start 处理
@@ -79,9 +83,11 @@ export async function router(update: Update) {
       return await AI.ask(uid, text);
     }
 
-    // 子机器人等待 token
+    // ==================================================
+    // 修复点②：子机器人 token 采集（给 saveToken 传 ctx）
+    // ==================================================
     if (user.waiting_subbot_token === true) {
-      return await Subbot.saveToken(uid, text);
+      return await Subbot.saveToken(ctx, text);
     }
 
     // fallback 主菜单
