@@ -9,7 +9,7 @@ import { TG } from "./main.ts";
 import type { Update } from "./types.ts";
 
 // 核心权限模块
-import { checkPermissions } from "./core/permissions.ts";
+import { getPermissions, canUse } from "./core/permissions.ts";
 
 // 数据库
 import { getUser, saveUser } from "./db/userdb.ts";
