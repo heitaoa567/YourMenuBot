@@ -1,53 +1,51 @@
 // ======================================================================
-//                         core/permissions.ts
+//                      core/permissions.ts
 //     全局权限系统（免费用户 VS VIP 用户的所有能力定义）
 // ======================================================================
 
 import type { UserData } from "../types.ts";
 
 // ----------------------------------------------------
-// VIP 套餐时长（与你确定过的价格对应）
+// VIP 套餐时长（天数）
 // ----------------------------------------------------
 export const VIP_PLANS = {
-  weekly: 7,       // 5 USDT
-  monthly: 30,     // 15 USDT
-  season: 90,      // 38 USDT
-  yearly: 365,     // 158 USDT
-  lifetime: 36500, // 终身（100年）888 USDT
+  weekly: 7,
+  monthly: 30,
+  season: 90,
+  yearly: 365,
+  lifetime: 36500,
 };
 
-
 // ----------------------------------------------------
-// 判断是否 VIP
+// 判断 VIP
 // ----------------------------------------------------
 export function isVIP(user: UserData): boolean {
-  if (!user.vip_until) return false;
-  return Date.now() < user.vip_until;
+  return user.vip_until && Date.now() < user.vip_until;
 }
 
-
 // ----------------------------------------------------
-// 免费用户能力（基础）
+// 免费用户基础权限
 // ----------------------------------------------------
 export const FREE = {
-  ai_minutes: 30,          // AI 每天 30 分钟
+  ai_minutes: 30,
+
   ai_gpt4: false,
   ai_vision: false,
 
-  listen_limit: 10,        // 子机器人监听次数/天
-  broadcast_text_limit: 3, // 文本广播次数/天
-  broadcast_media: false,  // 禁止媒体广播（避免发色情/病毒）
+  listen_limit: 10,
+  broadcast_text_limit: 3,
+  broadcast_media: false,
 
-  hide_ads: false,         // 免费用户不能关闭广告
-  supply_top: false,       // 不能置顶供需
-  referral_rate: 0,        // 推广返佣 0%
+  hide_ads: false,
+  supply_top: false,
 
-  wallet_priority: false,  // 提现不优先处理
+  referral_rate: 0, // 数字，不能用于 canUse()
+
+  wallet_priority: false,
 };
 
-
 // ----------------------------------------------------
-// VIP 用户能力（完全版）
+// VIP 权限
 // ----------------------------------------------------
 export const VIP = {
   ai_unlimited: true,
@@ -60,39 +58,31 @@ export const VIP = {
 
   hide_ads: true,
   supply_top: true,
-  referral_rate: 0.40,     // VIP 推广返佣 40%
 
-  wallet_priority: true,   // 提现优先处理
+  referral_rate: 0.40,
+
+  wallet_priority: true,
 };
 
-
 // ----------------------------------------------------
-// 获取用户权限（汇总所有能力）
+// 合并用户权限
 // ----------------------------------------------------
 export function getPermissions(user: UserData) {
   if (isVIP(user)) {
-    return {
-      isVIP: true,
-      ...VIP,
-    };
+    return { isVIP: true, ...VIP };
   }
-
-  return {
-    isVIP: false,
-    ...FREE,
-  };
+  return { isVIP: false, ...FREE };
 }
 
-
 // ----------------------------------------------------
-// 全局权限检查器：canUse(user, "ai_gpt4")
+// 权限检查器（返回布尔）
 // ----------------------------------------------------
-export function canUse(user: UserData, feature: string) {
+export function canUse(user: UserData, feature: string): boolean {
   const P = getPermissions(user);
 
   switch (feature) {
     case "ai":
-      return P.isVIP || P.ai_minutes > 0;
+      return P.isVIP || user.ai_used < FREE.ai_minutes * 60 * 1000;
 
     case "ai_gpt4":
       return P.ai_gpt4;
@@ -118,11 +108,7 @@ export function canUse(user: UserData, feature: string) {
     case "wallet_priority":
       return P.wallet_priority;
 
-    case "referral_rate":
-      return P.referral_rate;
-
     default:
       return false;
   }
 }
-
