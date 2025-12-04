@@ -5,7 +5,6 @@
 
 import { Router } from "../../core/router.ts";
 
-import { showSubBotMenu } from "./menu.ts";
 import { handleSubBotCallback } from "./callback.ts";
 import { handleSubBotInput } from "./handler.ts";
 import { renderSubBotView } from "./view.ts";
