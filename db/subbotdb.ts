@@ -39,7 +39,7 @@ async function saveDB() {
 
 
 // ======================================================================
-//                   获取子机器人数据（自动初始化）
+//                 获取子机器人（不存在则返回 null）
 // ======================================================================
 export async function getSubBot(owner_id: number): Promise<SubBotData | null> {
   if (Object.keys(cache).length === 0) await loadDB();
@@ -48,7 +48,7 @@ export async function getSubBot(owner_id: number): Promise<SubBotData | null> {
 
 
 // ======================================================================
-//                   创建 / 保存 子机器人
+//                        保存子机器人数据
 // ======================================================================
 export async function saveSubBot(owner_id: number, data: SubBotData) {
   cache[owner_id] = data;
@@ -57,7 +57,7 @@ export async function saveSubBot(owner_id: number, data: SubBotData) {
 
 
 // ======================================================================
-//                    新增子机器人（首次绑定）
+//                       创建新的子机器人
 // ======================================================================
 export async function createSubBot(
   owner_id: number,
@@ -70,13 +70,12 @@ export async function createSubBot(
   const bot: SubBotData = {
     owner_id,
     bot_token,
-    bot_user: bot_username,
+    bot_username,   // ✅ 修复字段名，与你 types.ts 配对
     bot_id,
 
     created_at: Date.now(),
 
     buttons: [],
-
     users: [],
 
     stats: {
@@ -94,12 +93,9 @@ export async function createSubBot(
 
 
 // ======================================================================
-//                      子机器人：保存用户
+//                      子机器人：新增用户
 // ======================================================================
-export async function addSubBotUser(
-  owner_id: number,
-  u: SubBotUser
-) {
+export async function addSubBotUser(owner_id: number, u: SubBotUser) {
   const bot = await getSubBot(owner_id);
   if (!bot) return;
 
@@ -108,7 +104,6 @@ export async function addSubBotUser(
 
   bot.users.push(u);
 
-  // 更新统计
   bot.stats.total_users++;
   bot.stats.new_users_today++;
 
@@ -117,12 +112,9 @@ export async function addSubBotUser(
 
 
 // ======================================================================
-//                      子机器人：按钮管理
+//                      子机器人：保存按钮
 // ======================================================================
-export async function setSubBotButtons(
-  owner_id: number,
-  list: SubBotButton[]
-) {
+export async function setSubBotButtons(owner_id: number, list: SubBotButton[]) {
   const bot = await getSubBot(owner_id);
   if (!bot) return;
 
@@ -132,7 +124,7 @@ export async function setSubBotButtons(
 
 
 // ======================================================================
-//                  子机器人：记录按钮点击统计
+//                  子机器人：记录点击次数
 // ======================================================================
 export async function addClick(owner_id: number) {
   const bot = await getSubBot(owner_id);
@@ -144,7 +136,7 @@ export async function addClick(owner_id: number) {
 
 
 // ======================================================================
-//                  获取所有子机器人（后台用）
+//                  获取所有子机器人（后台管理）
 // ======================================================================
 export async function getAllSubBots(): Promise<SubBotData[]> {
   if (Object.keys(cache).length === 0) await loadDB();
@@ -153,11 +145,10 @@ export async function getAllSubBots(): Promise<SubBotData[]> {
 
 
 // ======================================================================
-//                    删除子机器人（可选接口）
+//                    删除子机器人
 // ======================================================================
 export async function deleteSubBot(owner_id: number) {
   if (Object.keys(cache).length === 0) await loadDB();
   delete cache[owner_id];
   await saveDB();
 }
-
