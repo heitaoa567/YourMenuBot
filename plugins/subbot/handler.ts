@@ -1,91 +1,88 @@
-// =======================================
-// plugins/subbot/handler.ts
-// 子机器人模块文本输入处理（与你现有结构完全一致）
-// =======================================
+// ======================================================================
+//                         plugins/subbot/handler.ts
+//         子机器人文本输入处理（群发文本 / 群发按钮 / 监听规则）
+// ======================================================================
 
-import { Router } from "../../core/router";
-import { sendMsg } from "../../core/send";
-import { Users } from "../../userdb";
+import { getUser, saveUser } from "../../db/userdb.ts";
+import { sendText } from "../../core/send.ts";
 
-import { showSubBotBroadcastMenu } from "./menus/broadcast";
-import { showSubBotButtons } from "./menus/buttons";
+// 群发菜单与按钮菜单
+import { showSubBotBroadcastMenu } from "./menus/broadcast.ts";
+import { showSubBotButtons } from "./menus/buttons.ts";
 
-// 群发功能
-import { sendSubBotBroadcastText } from "./broadcast/sender";
-import { sendSubBotBroadcastButtons } from "./broadcast/sender";
+// 群发发送器
+import { sendSubBotBroadcastText, sendSubBotBroadcastButtons } from "./broadcast/sender.ts";
 
-// 监听功能
-import { saveListenerRules } from "./listener/index";
+// 监听规则
+import { saveListenerRules } from "./listener/index.ts";
 
-export function setupSubBotHandler(router: Router) {
+// ======================================================================
+//  处理纯文本输入（由 router.ts 触发）
+//  router.ts 中调用方式：Subbot.handleText(ctx, text)
+// ======================================================================
+export async function handleText(ctx: any, text: string) {
+  const uid = ctx.from.id;
 
-  // =====================================================
-  // 处理所有文本输入
-  // =====================================================
-  router.text(async (ctx) => {
-    const uid = ctx.from.id;
-    const text = ctx.message.text;
+  const user = await getUser(uid);
+  const step = user.step;
 
-    const user = Users.get(uid);
-    if (!user || !user.step) return; // 不是子机器人操作
+  if (!step) return false;
 
-    const step = user.step;
+  // ================================
+  // 1. 群发文本
+  // step: subbot_broadcast_text_<botId>
+  // ================================
+  if (step.startsWith("subbot_broadcast_text_")) {
+    const botId = Number(step.replace("subbot_broadcast_text_", ""));
 
-    // ================================
-    // 1. 输入群发文本
-    // step: subbot_broadcast_text_<id>
-    // ================================
-    if (step.startsWith("subbot_broadcast_text_")) {
-      const botId = Number(step.replace("subbot_broadcast_text_", ""));
+    await sendText(ctx, "⏳ 正在发送群发文本…");
 
-      await sendMsg(ctx, "⏳ 正在发送群发文本…");
+    await sendSubBotBroadcastText(botId, text);
 
-      await sendSubBotBroadcastText(botId, text);
+    user.step = null;
+    await saveUser(user);
 
-      Users.set(uid, { step: null });
+    return await showSubBotBroadcastMenu(ctx, botId);
+  }
 
-      return showSubBotBroadcastMenu(ctx, botId);
+  // ================================
+  // 2. 群发按钮 JSON
+  // step: subbot_broadcast_buttons_<botId>
+  // ================================
+  if (step.startsWith("subbot_broadcast_buttons_")) {
+    const botId = Number(step.replace("subbot_broadcast_buttons_", ""));
+
+    let buttons;
+    try {
+      buttons = JSON.parse(text);
+    } catch {
+      return await sendText(ctx, "❌ JSON 格式错误，请重新输入有效的按钮 JSON！");
     }
 
+    await sendText(ctx, "⏳ 正在发送带按钮的群发…");
 
-    // ================================
-    // 2. 输入群发按钮 JSON
-    // step: subbot_broadcast_buttons_<id>
-    // ================================
-    if (step.startsWith("subbot_broadcast_buttons_")) {
-      const botId = Number(step.replace("subbot_broadcast_buttons_", ""));
+    await sendSubBotBroadcastButtons(botId, buttons);
 
-      let buttons;
-      try {
-        buttons = JSON.parse(text);
-      } catch {
-        return sendMsg(ctx, "❌ JSON 格式错误，请重新输入有效的 JSON 按钮结构！");
-      }
+    user.step = null;
+    await saveUser(user);
 
-      await sendMsg(ctx, "⏳ 正在发送带按钮的群发…");
+    return await showSubBotBroadcastMenu(ctx, botId);
+  }
 
-      await sendSubBotBroadcastButtons(botId, buttons);
+  // ================================
+  // 3. 保存监听规则
+  // step: subbot_listener_rules_<botId>
+  // ================================
+  if (step.startsWith("subbot_listener_rules_")) {
+    const botId = Number(step.replace("subbot_listener_rules_", ""));
 
-      Users.set(uid, { step: null });
+    await saveListenerRules(botId, text);
 
-      return showSubBotBroadcastMenu(ctx, botId);
-    }
+    user.step = null;
+    await saveUser(user);
 
+    return await showSubBotButtons(ctx, botId);
+  }
 
-    // ================================
-    // 3. 输入监听规则
-    // step: subbot_listener_rules_<id>
-    // ================================
-    if (step.startsWith("subbot_listener_rules_")) {
-      const botId = Number(step.replace("subbot_listener_rules_", ""));
-
-      await saveListenerRules(botId, text);
-
-      Users.set(uid, { step: null });
-
-      return showSubBotButtons(ctx, botId);
-    }
-
-  });
+  return false;
 }
-
