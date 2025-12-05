@@ -1,11 +1,11 @@
 // ============================================================
 // plugins/subbot/menu.ts
-// 子机器人系统 - 主菜单（完全适配你目前的框架）
+// 子机器人系统 - 主菜单（完全适配你的 router.ts）
 // ============================================================
 
 import { sendText } from "../../core/send.ts";
 
-// 渲染 InlineKeyboard
+// 构建 InlineKeyboard
 function buildKeyboard() {
   return {
     inline_keyboard: [
@@ -19,10 +19,12 @@ function buildKeyboard() {
   };
 }
 
-// 子机器人主菜单（供 main.ts 或回调打开）
-export async function showSubBotMenu(uid: number) {
+// ==========================================
+// 兼容你的 sendText(ctx, ...) 调用方式
+// ==========================================
+export async function showSubBotMenu(ctx: any) {
   return await sendText(
-    uid,
+    ctx,
     "🤖 子机器人系统\n请选择功能：",
     buildKeyboard()
   );
