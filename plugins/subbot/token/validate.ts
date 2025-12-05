@@ -1,9 +1,7 @@
 // =======================================
 // plugins/subbot/token/validate.ts
-// 子机器人 Token 验证（严格按你之前的文件结构）
+// 子机器人 Token 验证（Deno 运行环境最终稳定版）
 // =======================================
-
-import fetch from "node-fetch";
 
 export interface ValidateResult {
   ok: boolean;
@@ -19,24 +17,22 @@ export interface ValidateResult {
  */
 export async function validateToken(token: string): Promise<ValidateResult> {
   try {
-    const res = await fetch(`https://api.telegram.org/bot${token}/getMe`);
+    const url = `https://api.telegram.org/bot${token}/getMe`;
 
+    const res = await fetch(url);
     if (!res.ok) return { ok: false };
 
     const data = await res.json();
     if (!data.ok) return { ok: false };
 
-    const bot = data.result;
-
     return {
       ok: true,
-      bot_id: bot.id,
-      username: bot.username,
-      name: bot.first_name
+      bot_id: data.result.id,
+      username: data.result.username,
+      name: data.result.first_name,
     };
 
-  } catch (err) {
+  } catch (_e) {
     return { ok: false };
   }
 }
-
