@@ -1,71 +1,69 @@
 // ======================================================================
 // plugins/subbot/listener/forward.ts
-// 子机器人媒体转发到主机器人（最终稳定版）
+// 子机器人媒体转发到主机器人（最终稳定版 - 100% 适配你的结构）
 // ======================================================================
 
-import { getSubBot } from "../../../db/subbotdb.ts";
+import { SubBotDB } from "../../../subbotdb.ts";
 import { sendPhoto, sendVideo, sendText } from "../../../core/send.ts";
 
 /**
  * 处理来自子机器人的媒体消息
- * @param ownerId 主机器人用户ID（绑定者）
- * @param botId   子机器人 bot_id
- * @param msg     原始 Telegram 消息对象
+ * @param botId  子机器人 bot_id
+ * @param msg    子机器人收到的原始消息
  */
-export async function handleSubBotForward(ownerId: number, botId: number, msg: any) {
-  // 找到子机器人
-  const bot = await getSubBot(ownerId);
-  if (!bot || bot.bot_id !== botId) {
-    console.log("❌ forward: 子机器人未找到 → owner:", ownerId, "botId:", botId);
+export async function handleSubBotForward(botId: number, msg: any) {
+  // 查找子机器人
+  const bot = SubBotDB.findBotById(botId);
+  if (!bot) {
+    console.log("❌ forward: 未找到子机器人 botId =", botId);
     return;
   }
 
-  // 转发给主控机器人（ownerId）
-  const target = ownerId;
+  const ownerId = bot.owner_id; // 主控机器人拥有者 TG ID
 
   // ================================
-  // 处理 Photo
+  // Photo
   // ================================
   if (msg.photo) {
-    const file = msg.photo[msg.photo.length - 1]; // 最大尺寸
-    return await sendPhoto(target, file.file_id, "📷 来自子机器人用户的照片");
+    const file = msg.photo[msg.photo.length - 1]; // 最大分辨率
+    return await sendPhoto(ownerId, file.file_id, "📷 子机器人用户发送的照片");
   }
 
   // ================================
-  // 处理 Video
+  // Video
   // ================================
   if (msg.video) {
     return await sendVideo(
-      target,
+      ownerId,
       msg.video.file_id,
-      "🎬 来自子机器人用户的视频"
+      "🎬 子机器人用户发送的视频"
     );
   }
 
   // ================================
-  // 处理 Document 文件
+  // Document
   // ================================
   if (msg.document) {
     return await sendText(
-      target,
-      `📄 子机器人用户发送了文件：<code>${msg.document.file_name}</code>\n暂不支持自动转存文件。`
+      ownerId,
+      `📄 用户发送了文件：<code>${msg.document.file_name}</code>\n（暂不自动转存文件）`
     );
   }
 
   // ================================
-  // 处理 Voice
+  // Voice
   // ================================
   if (msg.voice) {
-    return await sendText(target, "🎤 用户发送了语音消息（暂未转发语音文件）");
+    return await sendText(ownerId, "🎤 子机器人用户发送了语音信息（暂未支持转发语音）");
   }
 
   // ================================
-  // 处理 Sticker
+  // Sticker
   // ================================
   if (msg.sticker) {
-    return await sendText(target, "😄 用户发送了贴纸（暂不转发贴纸）");
+    return await sendText(ownerId, "😄 子机器人发送了贴纸（暂未支持转发贴纸）");
   }
 
-  // 默认情况
-  return await sendText(target, "📨 子机器人用户发送了一个未知类型的媒体消息。");
+  // 默认处理
+  return await sendText(ownerId, "📨 子机器人收到一个未知类型的媒体消息。");
 }
