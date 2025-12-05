@@ -1,29 +1,44 @@
-// =======================================
+// ======================================================================
 // plugins/subbot/listener/index.ts
-// 控制监听开关 + 保存规则
-// =======================================
+// 子机器人监听系统（完全适配你当前 subbotdb.ts 架构）
+// ======================================================================
 
-import { SubBotDB } from "../../../subbotdb";
-import { sendMsg } from "../../../core/send";
+import { getSubBot, saveSubBot } from "../../../db/subbotdb.ts";
+import { sendText } from "../../../core/send.ts";
 
-export function setupSubBotListenerModule(router: any) {
+// ======================================================
+// 切换监听开关：callback_data = sub_listener_<botId>
+// （由 router.ts 分发）
+// ======================================================
+export async function toggleListener(ctx: any, botId: number) {
+  const uid = ctx.from.id;
 
-  // 开启监听
-  router.callbackRegex(/^subbot_listener_(\d+)$/, async (ctx, m) => {
-    const botId = Number(m[1]);
+  // 每个 owner 只有一个 SubBot 对象
+  const bot = await getSubBot(uid);
+  if (!bot || bot.bot_id !== botId) {
+    return await sendText(ctx, "❌ 未找到该子机器人");
+  }
 
-    const bot = SubBotDB.findBotById(botId);
-    if (!bot) return sendMsg(ctx, "❌ 未找到该机器人");
+  bot.listener_enabled = !bot.listener_enabled;
 
-    const enabled = !bot.listener_enabled;
+  await saveSubBot(uid, bot);
 
-    SubBotDB.updateBot(botId, { listener_enabled: enabled });
-
-    await sendMsg(ctx, enabled ? "👁 已开启监听" : "🚫 已关闭监听");
-  });
+  return await sendText(
+    ctx,
+    bot.listener_enabled ? "👁 已开启监听" : "🚫 已关闭监听"
+  );
 }
 
-export async function saveListenerRules(botId: number, rules: string) {
-  SubBotDB.updateBot(botId, { listener_rules: rules });
-}
+// ======================================================
+// 保存监听规则
+// （handler.ts 在检测到 step=subbot_listener_rules_<botId> 时调用）
+// ======================================================
+export async function saveListenerRules(ownerId: number, rules: string) {
+  const bot = await getSubBot(ownerId);
+  if (!bot) return false;
 
+  bot.listener_rules = rules;
+  await saveSubBot(ownerId, bot);
+
+  return true;
+}
