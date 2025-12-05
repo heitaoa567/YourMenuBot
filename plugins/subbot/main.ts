@@ -16,33 +16,32 @@ function buildMenu() {
 }
 
 // =======================================
-// 显示子机器人主菜单
-// ctx → 换成 uid（与你当前 sendText 结构完全一致）
+// 显示子机器人主菜单（必须使用 ctx）
 // =======================================
-export async function showSubBotMainMenu(uid: number) {
+export async function showSubBotMainMenu(ctx: any) {
   return await sendText(
-    uid,
+    ctx,
     "🤖 子机器人系统\n请选择功能：",
     buildMenu()
   );
 }
 
 // =======================================
-// 被 router.ts 调用的文字指令入口
-// router.ts 会传 (uid, text)
+// 供 router.ts 调用的文字指令入口
+// router.ts 会传 ctx 而不是 uid
 // =======================================
-export async function command(uid: number, text: string) {
+export async function command(ctx: any, text: string) {
   if (text === "/subbot") {
-    return await showSubBotMainMenu(uid);
+    return await showSubBotMainMenu(ctx);
   }
 }
 
 // =======================================
 // 点击按钮 sub_main 时触发
-// router.ts 会传 (uid, data)
+// router.ts → Subbot.handle(ctx, data)
 // =======================================
-export async function callback(uid: number, data: string) {
+export async function callback(ctx: any, data: string) {
   if (data === "sub_main") {
-    return await showSubBotMainMenu(uid);
+    return await showSubBotMainMenu(ctx);
   }
 }
