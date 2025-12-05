@@ -1,37 +1,44 @@
 // ============================================================
 // plugins/subbot/token/index.ts
-// 子机器人 Token 绑定（适配你真实项目架构）
+// 子机器人 Token 绑定（适配当前 Deno 架构版）
 // ============================================================
 
 import { sendText } from "../../../core/send.ts";
 import { getUser, saveUser } from "../../../db/userdb.ts";
 
-// 打开“绑定子机器人”菜单
-export async function openBindMenu(ctx: any) {
-  await sendText(ctx,
-    "🔐 请输入你的子机器人 Token：\n\n格式：`123456789:XXXXX`",
+// 打开“绑定子机器人”菜单（可选使用）
+// 你也可以仅用 callback.ts 里的 sub_bind 按钮逻辑
+export async function openBindMenu(uid: number) {
+  // 标记为等待 Token
+  const user = await getUser(uid);
+  (user as any).waiting_subbot_token = true;
+  await saveUser(uid, user);
+
+  await sendText(
+    uid,
+    "🔐 请输入你的子机器人 Token：\n\n格式：<code>123456789:xxxxxxxxxxxxxxxxxxxxxxxx</code>",
   );
 }
 
-// 处理用户输入 Token（由 router.ts 调用）
-export async function processToken(ctx: any, text: string) {
-  const uid = ctx.from.id;
+// 处理用户输入 Token（如果你手动调用的话）
+// 一般 router 里直接用 Subbot.saveToken(uid, text) 即可
+export async function processToken(uid: number, text: string) {
   const user = await getUser(uid);
 
-  // 是否在等待 token？
-  if (!user.waiting_subbot_token) return;
+  if (!(user as any).waiting_subbot_token) return;
 
   const token = text.trim();
 
-  // 基础格式校验
-  if (!/^\d+:[A-Za-z0-9_-]+$/.test(token)) {
-    return await sendText(ctx, "❌ Token 格式不正确，请重新输入。");
+  // Telegram Bot Token 格式：一串数字 + 冒号 + 一串字符
+  const tokenRegex = /^\d+:[A-Za-z0-9_\-]{20,100}$/;
+  if (!tokenRegex.test(token)) {
+    await sendText(uid, "❌ Token 格式不正确，请重新输入。");
+    return;
   }
 
-  // 保存
-  user.waiting_subbot_token = false;
-  user.subbot_token = token;
-  await saveUser(user);
+  (user as any).waiting_subbot_token = false;
+  (user as any).subbot_token = token;
+  await saveUser(uid, user);
 
-  return await sendText(ctx, "✅ Token 已成功绑定！");
+  await sendText(uid, "✅ Token 已成功绑定！");
 }
