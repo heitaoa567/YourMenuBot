@@ -1,22 +1,23 @@
 // ======================================================================
 //                           db/subbotdb.ts
-//       子机器人数据库（Token / 用户 / 按钮 / 统计 / 广播）
+//     完整子机器人数据库（支持多机器人 / 查找 / 粉丝 / 按钮 / 监听）
 // ======================================================================
 
 import {
   SubBotData,
-  SubBotButton,
   SubBotUser,
+  SubBotButton,
 } from "../types.ts";
 
 const FILE = "./db/data/subbots.json";
 
 // 内存缓存
+// 结构：{ botId: SubBotData }
 let cache: Record<number, SubBotData> = {};
 
 
 // ======================================================================
-//                      加载数据库
+// 加载数据库
 // ======================================================================
 async function loadDB() {
   try {
@@ -29,54 +30,39 @@ async function loadDB() {
   }
 }
 
-
-// ======================================================================
-//                      保存数据库
-// ======================================================================
+// 保存
 async function saveDB() {
   await Deno.writeTextFile(FILE, JSON.stringify(cache, null, 2));
 }
 
 
 // ======================================================================
-//                 获取子机器人（不存在则返回 null）
+// 创建新的子机器人
 // ======================================================================
-export async function getSubBot(owner_id: number): Promise<SubBotData | null> {
-  if (Object.keys(cache).length === 0) await loadDB();
-  return cache[owner_id] || null;
-}
-
-
-// ======================================================================
-//                        保存子机器人数据
-// ======================================================================
-export async function saveSubBot(owner_id: number, data: SubBotData) {
-  cache[owner_id] = data;
-  await saveDB();
-}
-
-
-// ======================================================================
-//                       创建新的子机器人
-// ======================================================================
-export async function createSubBot(
+export async function addBot(
   owner_id: number,
-  bot_token: string,
-  bot_username: string,
+  token: string,
+  username: string,
+  name: string,
   bot_id: number
-): Promise<SubBotData> {
+) {
+
   if (Object.keys(cache).length === 0) await loadDB();
 
-  const bot: SubBotData = {
+  cache[bot_id] = {
     owner_id,
-    bot_token,
-    bot_username,   // ✅ 修复字段名，与你 types.ts 配对
+    bot_token: token,
+    bot_username: username,
+    bot_name: name,
     bot_id,
 
     created_at: Date.now(),
 
     buttons: [],
     users: [],
+
+    listener_enabled: false,
+    listener_rules: "",
 
     stats: {
       total_users: 0,
@@ -85,70 +71,83 @@ export async function createSubBot(
     },
   };
 
-  cache[owner_id] = bot;
   await saveDB();
-
-  return bot;
+  return cache[bot_id];
 }
 
 
 // ======================================================================
-//                      子机器人：新增用户
+// 获取子机器人（通过 botId）
 // ======================================================================
-export async function addSubBotUser(owner_id: number, u: SubBotUser) {
-  const bot = await getSubBot(owner_id);
-  if (!bot) return;
-
-  // 不重复添加
-  if (bot.users.some((x) => x.id === u.id)) return;
-
-  bot.users.push(u);
-
-  bot.stats.total_users++;
-  bot.stats.new_users_today++;
-
-  await saveSubBot(owner_id, bot);
-}
-
-
-// ======================================================================
-//                      子机器人：保存按钮
-// ======================================================================
-export async function setSubBotButtons(owner_id: number, list: SubBotButton[]) {
-  const bot = await getSubBot(owner_id);
-  if (!bot) return;
-
-  bot.buttons = list;
-  await saveSubBot(owner_id, bot);
-}
-
-
-// ======================================================================
-//                  子机器人：记录点击次数
-// ======================================================================
-export async function addClick(owner_id: number) {
-  const bot = await getSubBot(owner_id);
-  if (!bot) return;
-
-  bot.stats.clicks++;
-  await saveSubBot(owner_id, bot);
-}
-
-
-// ======================================================================
-//                  获取所有子机器人（后台管理）
-// ======================================================================
-export async function getAllSubBots(): Promise<SubBotData[]> {
+export async function findBotById(botId: number): Promise<SubBotData | null> {
   if (Object.keys(cache).length === 0) await loadDB();
-  return Object.values(cache);
+  return cache[botId] || null;
 }
 
 
 // ======================================================================
-//                    删除子机器人
+// 获取某个用户绑定的所有子机器人
 // ======================================================================
-export async function deleteSubBot(owner_id: number) {
+export async function getBots(owner_id: number): Promise<SubBotData[]> {
   if (Object.keys(cache).length === 0) await loadDB();
-  delete cache[owner_id];
+  return Object.values(cache).filter(b => b.owner_id === owner_id);
+}
+
+
+// ======================================================================
+// 更新子机器人字段
+// ======================================================================
+export async function updateBot(botId: number, patch: Partial<SubBotData>) {
+  if (Object.keys(cache).length === 0) await loadDB();
+  if (!cache[botId]) return;
+
+  Object.assign(cache[botId], patch);
+
   await saveDB();
 }
+
+
+// ======================================================================
+// 删除一个子机器人
+// ======================================================================
+export async function deleteBot(botId: number) {
+  if (Object.keys(cache).length === 0) await loadDB();
+  delete cache[botId];
+  await saveDB();
+}
+
+
+// ======================================================================
+// 新增粉丝
+// ======================================================================
+export async function addFollower(botId: number, user: SubBotUser) {
+  const bot = await findBotById(botId);
+  if (!bot) return;
+
+  if (!bot.users.some(u => u.id === user.id)) {
+    bot.users.push(user);
+    bot.stats.total_users++;
+    bot.stats.new_users_today++;
+    await saveDB();
+  }
+}
+
+
+// ======================================================================
+// 获取粉丝列表
+// ======================================================================
+export async function getFollowers(botId: number): Promise<number[]> {
+  const bot = await findBotById(botId);
+  if (!bot) return [];
+  return bot.users.map(u => u.id);
+}
+
+export const SubBotDB = {
+  addBot,
+  findBotById,
+  getBots,
+  updateBot,
+  deleteBot,
+  addFollower,
+  getFollowers,
+};
